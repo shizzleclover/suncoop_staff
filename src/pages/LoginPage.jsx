@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../store'
 import { USER_ROLES } from '../lib/utils'
 import { Button } from "@/components/ui/button"
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, BookOpen } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function LoginPage() {
@@ -146,6 +146,22 @@ export default function LoginPage() {
                 <p><span className="font-medium">Password:</span> any password</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* User Manual Link */}
+        <Card className="border-blue-200 bg-blue-50/50">
+          <CardContent className="pt-6">
+            <Link 
+              to="/manual" 
+              className="flex items-center justify-center gap-3 w-full p-4 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            >
+              <BookOpen className="h-5 w-5" />
+              <span className="font-medium">View Complete User Manual</span>
+            </Link>
+            <p className="text-center text-sm text-blue-700 mt-3">
+              Learn about all features and capabilities before logging in
+            </p>
           </CardContent>
         </Card>
       </div>

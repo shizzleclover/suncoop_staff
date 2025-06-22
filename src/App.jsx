@@ -6,6 +6,7 @@ import { USER_ROLES } from './lib/utils'
 
 // Components
 import LoginPage from './pages/LoginPage'
+import UserManual from './pages/UserManual'
 import StaffDashboard from './pages/staff/StaffDashboard'
 import StaffShifts from './pages/staff/StaffShifts'
 import StaffTimeTracking from './pages/staff/StaffTimeTracking'
@@ -71,6 +72,10 @@ function App() {
                 <LoginPage />
               </PublicRoute>
             } 
+          />
+          <Route 
+            path="/manual" 
+            element={<UserManual />} 
           />
           
           {/* Staff Routes */}

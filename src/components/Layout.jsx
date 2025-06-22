@@ -23,7 +23,8 @@ import {
   Settings, 
   LogOut,
   Bell,
-  Menu
+  Menu,
+  BookOpen
 } from 'lucide-react'
 
 const staffMenuItems = [
@@ -161,6 +162,12 @@ export default function Layout({ children }) {
                       </div>
                     </div>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/manual">
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        User Manual
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link to={user?.role === USER_ROLES.ADMIN ? '/admin/settings' : '/staff/profile'}>
                         <Settings className="mr-2 h-4 w-4" />
