@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
+import { Button } from "../../components/ui/button"
+import { Badge } from "../../components/ui/badge"
 import { 
   Users, 
   Calendar, 
@@ -19,98 +19,117 @@ import {
   ChevronRight,
   UserCheck,
   ClipboardList,
-  Shield
+  Shield,
+  CheckCircle,
+  Plus,
+  ArrowRight,
+  DollarSign,
+  UserPlus,
+  CalendarDays,
+  Timer
 } from 'lucide-react'
-import { mockUsers, mockShifts, mockTimeEntries, getLocationById } from '../../data/mockData'
-import { formatTime, formatDate, SHIFT_STATUS } from '../../lib/utils'
+import { useAuthStore } from '../../store/authStore'
+import { usersApi, shiftsApi, timeTrackingApi } from '../../lib/api'
+import { useToast } from '../../hooks/use-toast'
+import { formatTime, formatDate, formatDateShort } from '../../lib/utils'
+import AdminProtection from '../../components/AdminProtection'
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({
-    totalStaff: 0,
-    activeShifts: 0,
-    monthlyHours: 0,
-    alertsCount: 0
+  const { user } = useAuthStore()
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(true)
+  const [dashboardData, setDashboardData] = useState({
+    stats: {
+      totalStaff: 0,
+      activeStaff: 0,
+      activeShifts: 0,
+      pendingApprovals: 0,
+      totalHoursThisMonth: 0,
+      shiftsThisWeek: 0
+    },
+    upcomingShifts: [],
+    recentActivity: [],
+    topPerformers: [],
+    pendingTimeEntries: []
   })
-  const [upcomingShifts, setUpcomingShifts] = useState([])
-  const [recentActivity, setRecentActivity] = useState([])
-  const [staffPerformance, setStaffPerformance] = useState([])
 
   useEffect(() => {
     loadDashboardData()
-  }, [])
+  }, [user])
 
-  const loadDashboardData = () => {
-    // Calculate stats
-    const totalStaff = mockUsers.filter(user => user.role === 'staff').length
-    const today = new Date()
-    const activeShifts = mockShifts.filter(shift => {
-      const shiftStart = new Date(shift.startTime)
-      const shiftEnd = new Date(shift.endTime)
-      return today >= shiftStart && today <= shiftEnd && shift.status === SHIFT_STATUS.BOOKED
-    }).length
+  const loadDashboardData = async () => {
+    setIsLoading(true)
+    try {
+      // Load stats in parallel
+      const [
+        usersStatsResponse,
+        shiftsResponse,
+        pendingTimeEntriesResponse,
+        currentlyWorkingResponse
+      ] = await Promise.all([
+        usersApi.getUserStats(),
+        shiftsApi.getShifts({
+          startDate: new Date().toISOString(),
+          limit: 10,
+          sortBy: 'startTime',
+          sortOrder: 'asc'
+        }),
+        timeTrackingApi.getPendingApprovals(),
+        timeTrackingApi.getCurrentlyWorking()
+      ])
 
-    // Calculate monthly hours (current week * 4 as estimate)
-    const weekStart = new Date()
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay())
-    
-    const thisWeekHours = mockTimeEntries
-      .filter(entry => new Date(entry.date) >= weekStart)
-      .reduce((sum, entry) => sum + entry.hoursWorked, 0)
-    
-    const monthlyHours = thisWeekHours * 4 // Estimate
+      // Calculate stats
+      const stats = {
+        totalStaff: usersStatsResponse.data.totalUsers || 0,
+        activeStaff: usersStatsResponse.data.activeUsers || 0,
+        activeShifts: currentlyWorkingResponse.data.timeEntries?.length || 0,
+        pendingApprovals: pendingTimeEntriesResponse.data.timeEntries?.length || 0,
+        totalHoursThisMonth: 0, // Will be calculated from time entries
+        shiftsThisWeek: shiftsResponse.data.shifts?.length || 0
+      }
 
-    // Mock alerts count
-    const alertsCount = 3
+      // Get upcoming shifts (next 5)
+      const upcomingShifts = shiftsResponse.data.shifts
+        ?.filter(shift => new Date(shift.startTime) > new Date())
+        ?.slice(0, 5) || []
 
-    setStats({
-      totalStaff,
-      activeShifts,
-      monthlyHours,
-      alertsCount
-    })
+      // Initialize empty arrays for activity and performers
+      const recentActivity = []
+      const topPerformers = []
 
-    // Get upcoming shifts (next 24 hours)
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const upcoming = mockShifts
-      .filter(shift => {
-        const shiftDate = new Date(shift.startTime)
-        return shiftDate > today && shiftDate <= tomorrow && shift.assignedTo
+      setDashboardData({
+        stats,
+        upcomingShifts,
+        recentActivity,
+        topPerformers,
+        pendingTimeEntries: pendingTimeEntriesResponse.data.timeEntries || []
       })
-      .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
-      .slice(0, 5)
-    
-    setUpcomingShifts(upcoming)
 
-    // Recent activity
-    const recent = [
-      { type: 'shift_booking', user: 'Sarah Chen', action: 'Booked morning shift at Downtown Location', time: '2 hours ago', icon: Calendar },
-      { type: 'timesheet', user: 'Mike Johnson', action: 'Submitted timesheet for last week', time: '4 hours ago', icon: Clock },
-      { type: 'staff_join', user: 'Emma Wilson', action: 'Joined the team as new staff member', time: '1 day ago', icon: Users },
-      { type: 'shift_complete', user: 'Alex Thompson', action: 'Completed evening shift at Mall Location', time: '1 day ago', icon: UserCheck },
-      { type: 'system', user: 'System', action: 'Generated monthly performance reports', time: '2 days ago', icon: FileText }
-    ]
-    setRecentActivity(recent)
-
-    // Staff performance summary
-    const performance = mockUsers
-      .filter(user => user.role === 'staff')
-      .slice(0, 5)
-      .map(user => {
-        const userEntries = mockTimeEntries.filter(entry => entry.userId === user.id)
-        const totalHours = userEntries.reduce((sum, entry) => sum + entry.hoursWorked, 0)
-        const shiftsCount = mockShifts.filter(shift => shift.assignedTo === user.id).length
-        
-        return {
-          ...user,
-          totalHours,
-          shiftsCount,
-          performance: Math.floor(Math.random() * 20) + 80 // Mock performance score
-        }
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive"
       })
-      .sort((a, b) => b.totalHours - a.totalHours)
-    
-    setStaffPerformance(performance)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="h-32 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const QuickActionCard = ({ icon: Icon, title, description, link, color = "blue", count }) => {
@@ -155,16 +174,17 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-8">
+    <AdminProtection>
+      <div className="space-y-4 p-4 lg:space-y-8 lg:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="border-b border-gray-200 pb-6">
-        <div className="flex items-center gap-4">
-          <div className="p-4 bg-blue-100 rounded-lg">
-            <Shield className="h-8 w-8 text-blue-600" />
+      <div className="border-b border-gray-200 pb-4 lg:pb-6">
+        <div className="flex items-center gap-3 lg:gap-4">
+          <div className="p-3 bg-blue-100 rounded-lg lg:p-4">
+            <Shield className="h-6 w-6 text-blue-600 lg:h-8 lg:w-8" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Management Dashboard</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-xl font-bold text-gray-900 lg:text-3xl">Management Dashboard</h1>
+            <p className="text-sm text-gray-600 mt-1 lg:text-base">
               Workforce overview and operational insights
             </p>
           </div>
@@ -181,7 +201,7 @@ export default function AdminDashboard() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-2xl font-bold text-gray-900">{stats.totalStaff}</div>
+            <div className="text-2xl font-bold text-gray-900">{dashboardData.stats.totalStaff}</div>
             <p className="text-xs text-gray-500 mt-1">Active workforce</p>
           </CardContent>
         </Card>
@@ -194,7 +214,7 @@ export default function AdminDashboard() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-2xl font-bold text-gray-900">{stats.activeShifts}</div>
+            <div className="text-2xl font-bold text-gray-900">{dashboardData.stats.activeShifts}</div>
             <p className="text-xs text-gray-500 mt-1">Currently in progress</p>
           </CardContent>
         </Card>
@@ -207,7 +227,7 @@ export default function AdminDashboard() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-2xl font-bold text-gray-900">{stats.monthlyHours.toFixed(0)}</div>
+            <div className="text-2xl font-bold text-gray-900">{dashboardData.stats.totalHoursThisMonth.toFixed(0)}</div>
             <p className="text-xs text-gray-500 mt-1">Total hours this month</p>
           </CardContent>
         </Card>
@@ -220,7 +240,7 @@ export default function AdminDashboard() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-2xl font-bold text-gray-900">{stats.alertsCount}</div>
+            <div className="text-2xl font-bold text-gray-900">{dashboardData.stats.pendingApprovals}</div>
             <p className="text-xs text-gray-500 mt-1">Require attention</p>
           </CardContent>
         </Card>
@@ -236,23 +256,25 @@ export default function AdminDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {upcomingShifts.length > 0 ? (
+            {dashboardData.upcomingShifts.length > 0 ? (
               <div className="space-y-3">
-                {upcomingShifts.map((shift) => {
-                  const location = getLocationById(shift.locationId)
-                  const staff = mockUsers.find(u => u.id === shift.assignedTo)
+                {dashboardData.upcomingShifts.map((shift) => {
+                  const location = shift.locationId
+                  const staff = shift.assignedTo
                   const duration = ((new Date(shift.endTime) - new Date(shift.startTime)) / (1000 * 60 * 60)).toFixed(1)
                   
                   return (
-                    <div key={shift.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div key={shift._id || shift.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-blue-100 rounded-lg">
                           <Building2 className="h-4 w-4 text-blue-600" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{staff?.displayName || 'Unassigned'}</p>
+                          <p className="font-medium text-gray-900">
+                            {staff ? `${staff.firstName} ${staff.lastName}` : 'Unassigned'}
+                          </p>
                           <p className="text-sm text-gray-600">
-                            {location?.name} • {formatTime(shift.startTime)} • {duration}h
+                            {location?.name || 'Unknown Location'} • {formatTime(shift.startTime)} • {duration}h
                           </p>
                         </div>
                       </div>
@@ -282,9 +304,9 @@ export default function AdminDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {staffPerformance.length > 0 ? (
+            {dashboardData.topPerformers.length > 0 ? (
               <div className="space-y-3">
-                {staffPerformance.map((staff, index) => (
+                {dashboardData.topPerformers.map((staff, index) => (
                   <div key={staff.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -328,7 +350,7 @@ export default function AdminDashboard() {
             description="Manage team members and roles"
             link="/admin/staff"
             color="blue"
-            count={stats.totalStaff}
+            count={dashboardData.stats.totalStaff}
           />
           <QuickActionCard
             icon={Calendar}
@@ -336,7 +358,7 @@ export default function AdminDashboard() {
             description="Create and assign work shifts"
             link="/admin/shifts"
             color="green"
-            count={upcomingShifts.length}
+            count={dashboardData.upcomingShifts.length}
           />
           <QuickActionCard
             icon={BarChart3}
@@ -365,7 +387,7 @@ export default function AdminDashboard() {
             description="Review system notifications"
             link="/admin/alerts"
             color="red"
-            count={stats.alertsCount}
+            count={dashboardData.stats.pendingApprovals}
           />
         </div>
       </div>
@@ -380,18 +402,17 @@ export default function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {recentActivity.map((activity, index) => {
-              const Icon = activity.icon
+            {dashboardData.recentActivity.map((activity, index) => {
               return (
                 <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <div className="p-2 bg-blue-100 rounded-lg">
-                    <Icon className="h-4 w-4 text-blue-600" />
+                    <Activity className="h-4 w-4 text-blue-600" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">
-                      <span className="font-semibold">{activity.user}</span> {activity.action}
+                      <span className="font-semibold">{activity.user}</span> {activity.message}
                     </p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
+                    <p className="text-xs text-gray-500">{formatDateShort(activity.time)}</p>
                   </div>
                 </div>
               )
@@ -400,5 +421,6 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
     </div>
+    </AdminProtection>
   )
 } 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../store'
 import { USER_ROLES } from '../lib/utils'
@@ -7,28 +7,51 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Mail, Lock, BookOpen } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, BookOpen, User, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('') // Can be username or email
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const { signIn } = useAuthStore()
+  const [error, setError] = useState('')
+  const { signIn, needsInitialSetup, validateSession, checkSystemStatus } = useAuthStore()
   const navigate = useNavigate()
+
+      // Check if system needs initial setup
+    useEffect(() => {
+      const checkSetup = async () => {
+        await checkSystemStatus()
+        if (needsInitialSetup()) {
+          navigate('/admin-setup')
+          return
+        }
+
+        // Validate existing session
+        if (validateSession()) {
+          const user = useAuthStore.getState().user
+          if (user?.role === USER_ROLES.ADMIN) {
+            navigate('/admin/dashboard')
+          } else {
+            navigate('/staff/dashboard')
+          }
+        }
+      }
+      
+      checkSetup()
+    }, [needsInitialSetup, validateSession, navigate, checkSystemStatus])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
+    setError('')
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 800))
+      const result = await signIn(identifier, password)
       
-      const success = signIn(email, password)
-      if (success) {
-        const user = useAuthStore.getState().user
+      if (result.success) {
+        const user = result.user
         toast.success(`Welcome back, ${user.firstName}!`)
         
         // Navigate based on role
@@ -38,10 +61,13 @@ export default function LoginPage() {
           navigate('/staff/dashboard')
         }
       } else {
-        toast.error('Invalid credentials')
+        setError(result.error || 'Invalid credentials')
+        toast.error(result.error || 'Invalid credentials')
       }
     } catch (error) {
-      toast.error('Something went wrong')
+      const errorMessage = 'Something went wrong. Please try again.'
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -64,21 +90,28 @@ export default function LoginPage() {
           <CardHeader className="space-y-1">
             <CardTitle className="text-xl">Welcome back</CardTitle>
             <CardDescription>
-              Enter your credentials to access your account
+              Enter your username or email and password to access your account
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email address</Label>
+                <Label htmlFor="identifier">Username or Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="identifier"
+                    type="text"
+                    placeholder="Enter username or email"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
                     className="pl-9"
                     required
                   />
@@ -114,6 +147,15 @@ export default function LoginPage() {
                 </div>
               </div>
 
+              <div className="flex items-center justify-between">
+                <Link 
+                  to="/password-reset" 
+                  className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+
               <Button 
                 type="submit" 
                 className="w-full" 
@@ -122,30 +164,6 @@ export default function LoginPage() {
                 {isLoading ? "Signing in..." : "Sign in"}
               </Button>
             </form>
-          </CardContent>
-        </Card>
-
-        {/* Demo Credentials */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Demo Credentials</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="font-medium text-sm mb-2">Staff Account:</h4>
-              <div className="space-y-1 text-sm text-muted-foreground">
-                <p><span className="font-medium">Email:</span> staff@suncoop.com</p>
-                <p><span className="font-medium">Password:</span> any password</p>
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="font-medium text-sm mb-2">Admin Account:</h4>
-              <div className="space-y-1 text-sm text-muted-foreground">
-                <p><span className="font-medium">Email:</span> admin@suncoop.com</p>
-                <p><span className="font-medium">Password:</span> any password</p>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
@@ -164,6 +182,8 @@ export default function LoginPage() {
             </p>
           </CardContent>
         </Card>
+
+        {/* Quick Links */}
       </div>
     </div>
   )

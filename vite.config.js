@@ -13,7 +13,7 @@ export default defineConfig({
       manifest: {
         name: 'SunCoop Staff Management',
         short_name: 'SunCoop',
-        description: 'Staff scheduling and time tracking system with location verification',
+        description: 'Staff scheduling and time tracking system',
         theme_color: '#f59e0b',
         background_color: '#ffffff',
         display: 'standalone',

@@ -1,335 +1,358 @@
-import { useState, useEffect } from 'react'
-import { 
-  Calendar, 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
-  Clock,
-  MapPin,
-  Users
-} from 'lucide-react'
-import { mockShifts, mockLocations, getLocationById } from '../../data/mockData'
-import { formatTime, formatDate, SHIFT_STATUS } from '../../lib/utils'
-import toast from 'react-hot-toast'
+import React, { useState, useEffect } from 'react'
+import { Plus, Calendar, Clock, MapPin, Users, Filter, Search, MoreHorizontal, Edit, Trash2 } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Button } from '../../components/ui/button'
+import { Badge } from '../../components/ui/badge'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu'
+import { Input } from '../../components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { useToast } from '../../hooks/use-toast'
+import { formatTime, formatDate, formatDateShort } from '../../lib/utils'
+import { shiftsApi, locationsApi } from '../../lib/api'
+import ShiftGenerator from '../../components/ShiftGenerator'
 
 export default function AdminShifts() {
+  const { toast } = useToast()
   const [shifts, setShifts] = useState([])
+  const [locations, setLocations] = useState([])
   const [filteredShifts, setFilteredShifts] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [locationFilter, setLocationFilter] = useState('all')
-  const [dateFilter, setDateFilter] = useState('')
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterLocation, setFilterLocation] = useState('all')
+  const [filterDate, setFilterDate] = useState('')
+  const [showGeneratorModal, setShowGeneratorModal] = useState(false)
 
   useEffect(() => {
-    // Load shifts data
-    setShifts(mockShifts)
-    setFilteredShifts(mockShifts)
+    loadData()
   }, [])
 
   useEffect(() => {
-    // Filter shifts based on search and filters
-    let filtered = shifts
+    filterShifts()
+  }, [shifts, searchTerm, filterStatus, filterLocation, filterDate])
+
+  const loadData = async () => {
+    setIsLoading(true)
+    try {
+      // Load both shifts and locations in parallel
+      const [shiftsResponse, locationsResponse] = await Promise.all([
+        shiftsApi.getShifts({
+          limit: 100,
+          sortBy: 'startTime',
+          sortOrder: 'desc'
+        }),
+        locationsApi.getActiveLocations()
+      ])
+
+      if (shiftsResponse.success) {
+        setShifts(shiftsResponse.data.shifts || [])
+      }
+
+      if (locationsResponse.success) {
+        setLocations(locationsResponse.data.locations || [])
+      }
+    } catch (error) {
+      console.error('Failed to load data:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load shifts data",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const filterShifts = () => {
+    let filtered = [...shifts]
 
     if (searchTerm) {
-      filtered = filtered.filter(shift => {
-        const location = getLocationById(shift.locationId)
-        return location?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-               shift.description.toLowerCase().includes(searchTerm.toLowerCase())
-      })
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(shift => shift.status === statusFilter)
-    }
-
-    if (locationFilter !== 'all') {
-      filtered = filtered.filter(shift => shift.locationId === locationFilter)
-    }
-
-    if (dateFilter) {
       filtered = filtered.filter(shift => 
-        new Date(shift.startTime).toDateString() === new Date(dateFilter).toDateString()
+        shift.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getLocationById(shift.locationId._id || shift.locationId)?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    if (filterStatus && filterStatus !== 'all') {
+      filtered = filtered.filter(shift => shift.status === filterStatus)
+    }
+
+    if (filterLocation && filterLocation !== 'all') {
+      filtered = filtered.filter(shift => 
+        (shift.locationId._id || shift.locationId) === filterLocation
+      )
+    }
+
+    if (filterDate) {
+      const selectedDate = new Date(filterDate).toDateString()
+      filtered = filtered.filter(shift => 
+        new Date(shift.startTime).toDateString() === selectedDate
       )
     }
 
     setFilteredShifts(filtered)
-  }, [searchTerm, statusFilter, locationFilter, dateFilter, shifts])
+  }
 
-  const handleDeleteShift = (shiftId) => {
-    if (window.confirm('Are you sure you want to delete this shift?')) {
-      setShifts(prev => prev.filter(shift => shift.id !== shiftId))
-      toast.success('Shift deleted successfully')
+  const getLocationById = (locationId) => {
+    return locations.find(location => location._id === locationId)
+  }
+
+  const handleDeleteShift = async (shiftId) => {
+    try {
+      await shiftsApi.deleteShift(shiftId)
+      toast({
+        title: "Success",
+        description: "Shift deleted successfully",
+      })
+      loadData() // Refresh data
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete shift",
+        variant: "destructive",
+      })
     }
   }
 
   const getStatusColor = (status) => {
     switch (status) {
-      case SHIFT_STATUS.AVAILABLE:
+      case 'AVAILABLE':
         return 'bg-blue-100 text-blue-800'
-      case SHIFT_STATUS.BOOKED:
+      case 'BOOKED':
         return 'bg-green-100 text-green-800'
-      case SHIFT_STATUS.COMPLETED:
+      case 'COMPLETED':
         return 'bg-gray-100 text-gray-800'
-      case SHIFT_STATUS.CANCELLED:
+      case 'CANCELLED':
         return 'bg-red-100 text-red-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
   }
+  
+  // Handle shifts generated from the bulk generator
+  const handleShiftsGenerated = (newShifts) => {
+    toast({
+      title: "Success",
+      description: `${newShifts.length} shifts generated successfully`,
+    })
+    loadData() // Refresh the shifts list
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+            <div className="bg-white rounded-lg p-6 shadow">
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-16 bg-gray-200 rounded"></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Shift Management</h1>
-          <p className="text-gray-600">Create and manage work shifts</p>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+                      <h1 className="text-2xl font-bold text-gray-900">Shift Management</h1>
+          <p className="text-gray-600">Create, assign, and manage work shifts</p>
         </div>
-        <button className="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700 flex items-center">
+        <Button 
+          className="bg-amber-600 hover:bg-amber-700"
+          onClick={() => setShowGeneratorModal(true)}
+        >
           <Plus className="w-4 h-4 mr-2" />
-          Create Shift
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search shifts..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-amber-500 focus:border-amber-500"
-            />
-          </div>
-
-          {/* Date Filter */}
-          <div>
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-amber-500 focus:border-amber-500"
-            />
-          </div>
-
-          {/* Status Filter */}
-          <div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-amber-500 focus:border-amber-500"
-            >
-              <option value="all">All Status</option>
-              <option value={SHIFT_STATUS.AVAILABLE}>Available</option>
-              <option value={SHIFT_STATUS.BOOKED}>Booked</option>
-              <option value={SHIFT_STATUS.COMPLETED}>Completed</option>
-              <option value={SHIFT_STATUS.CANCELLED}>Cancelled</option>
-            </select>
-          </div>
-
-          {/* Location Filter */}
-          <div>
-            <select
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-amber-500 focus:border-amber-500"
-            >
-              <option value="all">All Locations</option>
-              {mockLocations.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Clear Filters */}
-          <div>
-            <button
-              onClick={() => {
-                setSearchTerm('')
-                setStatusFilter('all')
-                setLocationFilter('all')
-                setDateFilter('')
-              }}
-              className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-200 transition-colors"
-            >
-              Clear Filters
-            </button>
-          </div>
+          Generate Shifts
+        </Button>
         </div>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <Calendar className="w-8 h-8 text-blue-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Shifts</p>
-              <p className="text-2xl font-bold text-gray-900">{shifts.length}</p>
+        {/* Filters */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div>
+                <Input
+                  placeholder="Search shifts..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="AVAILABLE">Available</SelectItem>
+                    <SelectItem value="BOOKED">Booked</SelectItem>
+                    <SelectItem value="COMPLETED">Completed</SelectItem>
+                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Select value={filterLocation} onValueChange={setFilterLocation}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Locations</SelectItem>
+                    {locations.map((location) => (
+                      <SelectItem key={location._id} value={location._id}>
+                        {location.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Input
+                  type="date"
+                  placeholder="Filter by date"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSearchTerm('')
+                    setFilterStatus('all')
+                    setFilterLocation('all')
+                    setFilterDate('')
+                  }}
+                  className="w-full"
+                >
+                  Clear Filters
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <Users className="w-8 h-8 text-green-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Available</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {shifts.filter(s => s.status === SHIFT_STATUS.AVAILABLE).length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <Clock className="w-8 h-8 text-amber-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Booked</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {shifts.filter(s => s.status === SHIFT_STATUS.BOOKED).length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <MapPin className="w-8 h-8 text-purple-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Completed</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {shifts.filter(s => s.status === SHIFT_STATUS.COMPLETED).length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Shifts List */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Shifts ({filteredShifts.length})
-          </h2>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Shift Details
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Time
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Capacity
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rate
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredShifts.map((shift) => {
-                const location = getLocationById(shift.locationId)
-                const duration = ((new Date(shift.endTime) - new Date(shift.startTime)) / (1000 * 60 * 60)).toFixed(1)
-                
-                return (
-                  <tr key={shift.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="flex items-center mb-1">
-                          <MapPin className="w-4 h-4 mr-1 text-gray-400" />
-                          <div className="text-sm font-medium text-gray-900">
-                            {location?.name}
+        {/* Shifts Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Calendar className="w-5 h-5" />
+              <span>All Shifts ({filteredShifts.length})</span>
+            </CardTitle>
+            <CardDescription>
+              Manage all work shifts and assignments
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {filteredShifts.length > 0 ? (
+              <div className="space-y-4">
+                {filteredShifts.map((shift) => {
+                  const location = getLocationById(shift.locationId._id || shift.locationId)
+                  const duration = ((new Date(shift.endTime) - new Date(shift.startTime)) / (1000 * 60 * 60)).toFixed(1)
+                  
+                  return (
+                    <div key={shift._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                      <div className="flex items-center space-x-4">
+                        <div className="p-2 bg-amber-100 rounded-lg">
+                          <Calendar className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-medium text-gray-900">
+                              {formatDateShort(shift.startTime)}
+                            </h3>
+                            <Badge className={getStatusColor(shift.status)}>
+                              {shift.status}
+                            </Badge>
                           </div>
-                        </div>
-                        <div className="text-sm text-gray-500">{shift.description}</div>
-                        <div className="text-xs text-gray-400">
-                          {formatDate(shift.startTime)}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        <div className="flex items-center mb-1">
-                          <Clock className="w-4 h-4 mr-1 text-gray-400" />
-                          {formatTime(shift.startTime)} - {formatTime(shift.endTime)}
-                        </div>
-                        <div className="text-xs text-gray-500">{duration}h duration</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        <div className="flex items-center">
-                          <Users className="w-4 h-4 mr-1 text-gray-400" />
-                          {shift.currentCapacity}/{shift.maxCapacity}
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full" 
-                            style={{ width: `${(shift.currentCapacity / shift.maxCapacity) * 100}%` }}
-                          />
+                          <p className="text-sm text-gray-600 flex items-center mt-1">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {formatTime(shift.startTime)} - {formatTime(shift.endTime)} ({duration}h)
+                          </p>
+                          <p className="text-sm text-gray-600 flex items-center">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {location?.name || 'Unknown Location'}
+                          </p>
+                          {shift.description && (
+                            <p className="text-xs text-gray-500 mt-1">{shift.description}</p>
+                          )}
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                                                  {((new Date(shift.endTime) - new Date(shift.startTime)) / (1000 * 60 * 60)).toFixed(1)}h
+                      
+                      <div className="flex items-center space-x-4">
+                        {shift.assignedTo && (
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-gray-900">
+                              {shift.assignedTo.firstName} {shift.assignedTo.lastName}
+                            </p>
+                            <p className="text-xs text-gray-500">{shift.assignedTo.email}</p>
+                          </div>
+                        )}
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit Shift
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDeleteShift(shift._id)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete Shift
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(shift.status)}`}>
-                        {shift.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button className="text-amber-600 hover:text-amber-900">
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteShift(shift.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {filteredShifts.length === 0 && (
-          <div className="text-center py-12">
-            <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No shifts found</h3>
-            <p className="text-gray-600">
-              {searchTerm || statusFilter !== 'all' || locationFilter !== 'all' || dateFilter
-                ? 'Try adjusting your filters' 
-                : 'Create your first shift to get started'}
-            </p>
-          </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No shifts found</h3>
+                <p className="text-gray-500 mb-4">
+                  {searchTerm || filterStatus || filterLocation || filterDate
+                    ? "No shifts match your current filters"
+                    : "Get started by creating your first shift"
+                  }
+                </p>
+                <Button 
+                  className="bg-amber-600 hover:bg-amber-700"
+                  onClick={() => setShowGeneratorModal(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Generate First Shifts
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        {/* Shift Generator Modal */}
+        {showGeneratorModal && (
+          <ShiftGenerator
+            isOpen={showGeneratorModal}
+            onClose={() => setShowGeneratorModal(false)}
+            locations={locations}
+            onShiftsGenerated={handleShiftsGenerated}
+          />
         )}
       </div>
     </div>

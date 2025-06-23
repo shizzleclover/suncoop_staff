@@ -1,164 +1,186 @@
-import { useState, useEffect } from 'react'
-import { 
-  Clock, 
-  MapPin, 
-  Calendar,
-  CheckCircle,
-  XCircle,
-  Wifi,
-  BarChart3
-} from 'lucide-react'
-import { useStore } from '../../store'
-import { mockTimeEntries, getLocationById } from '../../data/mockData'
+import React, { useState, useEffect } from 'react'
+import { useAuthStore } from '../../store'
+import { Clock, MapPin, CheckCircle, XCircle, AlertTriangle, Calendar } from 'lucide-react'
 import { formatTime, formatDate, calculateHours } from '../../lib/utils'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Badge } from '../../components/ui/badge'
+import { Button } from '../../components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import { timeTrackingApi } from '../../lib/api'
+import { useToast } from '../../hooks/use-toast'
 
 export default function StaffTimeTracking() {
-  const { user, timeEntries, currentTimeEntry } = useStore()
-  const [filteredEntries, setFilteredEntries] = useState([])
-  const [selectedPeriod, setSelectedPeriod] = useState('week') // week, month, all
-  const [stats, setStats] = useState({
+  const { user } = useAuthStore()
+  const { toast } = useToast()
+  const [timeEntries, setTimeEntries] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [currentTimeEntry, setCurrentTimeEntry] = useState(null)
+  const [timeSummary, setTimeSummary] = useState({
     totalHours: 0,
-    averageShiftLength: 0,
-    shiftsCompleted: 0
+    totalRegularHours: 0,
+    totalOvertimeHours: 0,
+    totalPay: 0
   })
 
   useEffect(() => {
-    // Filter time entries based on selected period
-    const now = new Date()
-    let startDate
+    loadTimeEntries()
+    loadTimeSummary()
+    checkCurrentTimeEntry()
+  }, [user])
 
-    switch (selectedPeriod) {
-      case 'week':
-        startDate = new Date(now)
-        startDate.setDate(now.getDate() - 7)
-        break
-      case 'month':
-        startDate = new Date(now)
-        startDate.setDate(now.getDate() - 30)
-        break
-      default:
-        startDate = new Date(0) // All time
+  const loadTimeEntries = async () => {
+    if (!user) return
+    
+    setIsLoading(true)
+    try {
+      const response = await timeTrackingApi.getTimeEntries({
+        userId: user.id,
+        limit: 50,
+        sortBy: 'date',
+        sortOrder: 'desc'
+      })
+      setTimeEntries(response.data.timeEntries || [])
+    } catch (error) {
+      console.error('Failed to load time entries:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load time entries",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    const userEntries = timeEntries
-      .filter(entry => entry.userId === user?.id)
-      .filter(entry => new Date(entry.clockInTime) >= startDate)
-      .sort((a, b) => new Date(b.clockInTime) - new Date(a.clockInTime))
+  const loadTimeSummary = async () => {
+    if (!user) return
+    
+    try {
+      const response = await timeTrackingApi.getTimeSummary({
+        userId: user.id,
+        startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
+        endDate: new Date().toISOString()
+      })
+      setTimeSummary(response.data.summary || {})
+    } catch (error) {
+      console.error('Failed to load time summary:', error)
+    }
+  }
 
-    setFilteredEntries(userEntries)
-
-    // Calculate stats
-    const totalHours = userEntries.reduce((sum, entry) => sum + (entry.hoursWorked || 0), 0)
-    const completedShifts = userEntries.filter(entry => entry.clockOutTime).length
-    const averageShiftLength = completedShifts > 0 ? totalHours / completedShifts : 0
-
-    setStats({
-      totalHours,
-      averageShiftLength,
-      shiftsCompleted: completedShifts
-    })
-
-  }, [timeEntries, user, selectedPeriod])
+  const checkCurrentTimeEntry = async () => {
+    if (!user) return
+    
+    try {
+      const response = await timeTrackingApi.getCurrentlyWorking()
+      const currentEntry = response.data.timeEntries.find(
+        entry => entry.userId._id === user.id
+      )
+      setCurrentTimeEntry(currentEntry || null)
+    } catch (error) {
+      console.error('Failed to check current time entry:', error)
+    }
+  }
 
   const TimeEntryCard = ({ entry }) => {
-    const location = getLocationById(entry.shift?.locationId)
-    const duration = entry.hoursWorked || calculateHours(entry.clockInTime, entry.clockOutTime || new Date())
-    const isActive = !entry.clockOutTime
+    const getStatusColor = (status) => {
+      switch (status) {
+        case 'approved': return 'bg-green-100 text-green-800'
+        case 'rejected': return 'bg-red-100 text-red-800'
+        case 'pending': return 'bg-yellow-100 text-yellow-800'
+        case 'clocked_in': return 'bg-blue-100 text-blue-800'
+        default: return 'bg-gray-100 text-gray-800'
+      }
+    }
+
+    const getStatusIcon = (status) => {
+      switch (status) {
+        case 'approved': return <CheckCircle className="h-4 w-4" />
+        case 'rejected': return <XCircle className="h-4 w-4" />
+        case 'pending': return <AlertTriangle className="h-4 w-4" />
+        case 'clocked_in': return <Clock className="h-4 w-4" />
+        default: return <Clock className="h-4 w-4" />
+      }
+    }
 
     return (
-      <div className={`bg-white rounded-lg shadow border p-6 ${isActive ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}>
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <div className="flex items-center mb-2">
-              <h3 className="font-semibold text-gray-900">{location?.name || 'Unknown Location'}</h3>
-              {isActive && (
-                <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Active
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-gray-600 mb-1">{formatDate(entry.clockInTime)}</p>
-            <div className="flex items-center text-sm text-gray-500">
-              <Clock className="w-4 h-4 mr-1" />
-              <span>
-                {formatTime(entry.clockInTime)} - {entry.clockOutTime ? formatTime(entry.clockOutTime) : 'In Progress'}
-              </span>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-lg font-bold text-blue-600">{duration.toFixed(1)}h</p>
-            <p className="text-sm text-gray-500">Duration</p>
-          </div>
-        </div>
-
-        {/* Location & WiFi Verification */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="flex items-center">
-            <div className="flex items-center">
-              {entry.clockInLocation ? (
-                <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-              ) : (
-                <XCircle className="w-4 h-4 text-red-500 mr-2" />
-              )}
-              <span className="text-xs text-gray-600">
-                Clock In Location {entry.clockInLocation ? 'Verified' : 'Failed'}
-              </span>
-            </div>
-          </div>
-          
-          <div className="flex items-center">
-            <div className="flex items-center">
-              {entry.clockInWifi?.isValid ? (
-                <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-              ) : (
-                <XCircle className="w-4 h-4 text-red-500 mr-2" />
-              )}
-              <span className="text-xs text-gray-600">
-                WiFi {entry.clockInWifi?.isValid ? 'Verified' : 'Failed'}
-              </span>
-            </div>
-          </div>
-
-          {entry.clockOutTime && (
-            <>
-              <div className="flex items-center">
-                <div className="flex items-center">
-                  {entry.clockOutLocation ? (
-                    <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-red-500 mr-2" />
-                  )}
-                  <span className="text-xs text-gray-600">
-                    Clock Out Location {entry.clockOutLocation ? 'Verified' : 'Failed'}
-                  </span>
-                </div>
+      <Card className="w-full">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-medium">
+              {formatDate(entry.date)}
+            </CardTitle>
+            <Badge variant="outline" className={getStatusColor(entry.status)}>
+              <div className="flex items-center gap-1">
+                {getStatusIcon(entry.status)}
+                <span className="capitalize">{entry.status}</span>
               </div>
-              
-              <div className="flex items-center">
-                <div className="flex items-center">
-                  {entry.clockOutWifi?.isValid ? (
-                    <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-red-500 mr-2" />
-                  )}
-                  <span className="text-xs text-gray-600">
-                    WiFi {entry.clockOutWifi?.isValid ? 'Verified' : 'Failed'}
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="space-y-3">
+            {/* Location */}
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <MapPin className="h-4 w-4" />
+              <span>{entry.locationId?.name || 'Unknown Location'}</span>
+            </div>
 
-        {/* Additional Details */}
-        <div className="pt-4 border-t border-gray-200">
-          <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
-            <div>
-              <span className="font-medium">WiFi Network:</span> {entry.clockInWifi?.ssid || 'Unknown'}
+            {/* Time details */}
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              {entry.clockInTime && (
+                <div>
+                  <span className="text-gray-500">Clock In:</span>
+                  <p className="font-medium">{formatTime(entry.clockInTime)}</p>
+                </div>
+              )}
+              {entry.clockOutTime && (
+                <div>
+                  <span className="text-gray-500">Clock Out:</span>
+                  <p className="font-medium">{formatTime(entry.clockOutTime)}</p>
+                </div>
+              )}
+              <div>
+                <span className="text-gray-500">Hours Worked:</span>
+                <p className="font-medium">{entry.hoursWorked || 0} hrs</p>
+              </div>
+              {entry.breakTime > 0 && (
+                <div>
+                  <span className="text-gray-500">Break Time:</span>
+                  <p className="font-medium">{entry.breakTime} mins</p>
+                </div>
+              )}
             </div>
-            <div>
-              <span className="font-medium">Status:</span> {entry.status.replace('_', ' ').toUpperCase()}
-            </div>
+
+            {/* Notes */}
+            {entry.notes && (
+              <div className="mt-3 p-2 bg-gray-50 rounded-md">
+                <span className="text-xs text-gray-500">Notes:</span>
+                <p className="text-sm text-gray-700">{entry.notes}</p>
+              </div>
+            )}
+
+            {/* Admin notes for rejected entries */}
+            {entry.status === 'rejected' && entry.adminNotes && (
+              <div className="mt-3 p-2 bg-red-50 rounded-md border border-red-200">
+                <span className="text-xs text-red-600 font-medium">Rejection Reason:</span>
+                <p className="text-sm text-red-700">{entry.adminNotes}</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-40 bg-gray-200 rounded"></div>
+            ))}
           </div>
         </div>
       </div>
@@ -166,158 +188,77 @@ export default function StaffTimeTracking() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Time Tracking</h1>
-        <p className="text-gray-600">View your work history and hours worked</p>
       </div>
 
-      {/* Period Selector */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Time Period</h2>
-          <div className="flex space-x-2">
-            {[
-              { value: 'week', label: 'Last 7 Days' },
-              { value: 'month', label: 'Last 30 Days' },
-              { value: 'all', label: 'All Time' }
-            ].map((period) => (
-              <button
-                key={period.value}
-                onClick={() => setSelectedPeriod(period.value)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  selectedPeriod === period.value
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {period.label}
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Total Hours (This Month)</CardDescription>
+            <CardTitle className="text-2xl">{timeSummary.totalHours || 0}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Regular Hours</CardDescription>
+            <CardTitle className="text-2xl">{timeSummary.totalRegularHours || 0}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Overtime Hours</CardDescription>
+            <CardTitle className="text-2xl">{timeSummary.totalOvertimeHours || 0}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Total Pay</CardDescription>
+            <CardTitle className="text-2xl">${timeSummary.totalPay || 0}</CardTitle>
+          </CardHeader>
+        </Card>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <Clock className="w-8 h-8 text-blue-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Hours</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalHours.toFixed(1)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <Clock className="w-8 h-8 text-blue-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Average Shift Length</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {stats.averageShiftLength.toFixed(1)} hours
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <BarChart3 className="w-8 h-8 text-purple-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Shifts Completed</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.shiftsCompleted}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Current Active Session */}
+      {/* Current Status */}
       {currentTimeEntry && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-          <div className="flex items-center mb-4">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse mr-3" />
-            <h2 className="text-lg font-semibold text-green-900">Currently Clocked In</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <p className="text-sm font-medium text-green-700">Clock In Time</p>
-              <p className="text-green-900">{formatTime(currentTimeEntry.clockInTime)}</p>
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-800">
+              <Clock className="h-5 w-5" />
+              Currently Working
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <p><strong>Location:</strong> {currentTimeEntry.locationId?.name}</p>
+              <p><strong>Clock In:</strong> {formatTime(currentTimeEntry.clockInTime)}</p>
+              <p><strong>Duration:</strong> {calculateHours(currentTimeEntry.clockInTime, new Date())} hours</p>
             </div>
-            <div>
-              <p className="text-sm font-medium text-green-700">Duration</p>
-              <p className="text-green-900">
-                {calculateHours(currentTimeEntry.clockInTime, new Date()).toFixed(1)} hours
-              </p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Time Entries List */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Work History ({filteredEntries.length} entries)
-          </h2>
-        </div>
+      {/* Time Entries */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Time Entries</h2>
         
-        <div className="p-6">
-          {filteredEntries.length > 0 ? (
-            <div className="space-y-4">
-              {filteredEntries.map((entry) => (
-                <TimeEntryCard key={entry.id} entry={entry} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No time entries found</h3>
-              <p className="text-gray-600">
-                {selectedPeriod === 'all' 
-                  ? "You haven't clocked in for any shifts yet." 
-                  : `No work history found for the selected ${selectedPeriod === 'week' ? '7 days' : '30 days'}.`}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Verification Legend */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Verification Status Legend</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center">
-            <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-            <div>
-              <p className="font-medium text-gray-900">Verified</p>
-              <p className="text-sm text-gray-600">Location and WiFi confirmation successful</p>
-            </div>
+        {timeEntries.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {timeEntries.map((entry) => (
+              <TimeEntryCard key={entry._id} entry={entry} />
+            ))}
           </div>
-          <div className="flex items-center">
-            <XCircle className="w-5 h-5 text-red-500 mr-3" />
-            <div>
-              <p className="font-medium text-gray-900">Failed</p>
-              <p className="text-sm text-gray-600">Verification could not be completed</p>
-            </div>
-          </div>
-          <div className="flex items-center">
-            <MapPin className="w-5 h-5 text-blue-500 mr-3" />
-            <div>
-              <p className="font-medium text-gray-900">GPS Location</p>
-              <p className="text-sm text-gray-600">Geographic coordinates verified</p>
-            </div>
-          </div>
-          <div className="flex items-center">
-            <Wifi className="w-5 h-5 text-purple-500 mr-3" />
-            <div>
-              <p className="font-medium text-gray-900">WiFi Network</p>
-              <p className="text-sm text-gray-600">Connected to authorized network</p>
-            </div>
-          </div>
-        </div>
+        ) : (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Time Entries</h3>
+              <p className="text-gray-600">You haven't logged any time entries yet.</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

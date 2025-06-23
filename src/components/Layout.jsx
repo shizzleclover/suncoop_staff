@@ -24,7 +24,8 @@ import {
   LogOut,
   Bell,
   Menu,
-  BookOpen
+  BookOpen,
+  MapPin
 } from 'lucide-react'
 
 const staffMenuItems = [
@@ -38,7 +39,9 @@ const adminMenuItems = [
   { icon: Home, label: 'Dashboard', href: '/admin/dashboard' },
   { icon: Users, label: 'Staff', href: '/admin/staff' },
   { icon: Calendar, label: 'Shifts', href: '/admin/shifts' },
+  { icon: MapPin, label: 'Locations', href: '/admin/locations' },
   { icon: BarChart3, label: 'Reports', href: '/admin/reports' },
+  { icon: User, label: 'Profile', href: '/admin/profile' },
   { icon: Settings, label: 'Settings', href: '/admin/settings' },
 ]
 
@@ -166,6 +169,12 @@ export default function Layout({ children }) {
                       <Link to="/manual">
                         <BookOpen className="mr-2 h-4 w-4" />
                         User Manual
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to={user?.role === USER_ROLES.ADMIN ? '/admin/profile' : '/staff/profile'}>
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>

@@ -1,203 +1,228 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { useAuthStore } from '../../store'
-import { formatTime, formatDate, BUSINESS_RULES, SHIFT_STATUS, isToday, isTomorrow } from '../../lib/utils'
-import { mockShifts, mockTimeEntries, getLocationById } from '../../data/mockData'
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import React, { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { 
   Clock, 
   Calendar, 
   MapPin, 
-  Wifi, 
-  TrendingUp,
-  AlertTriangle,
-  Play,
-  Square,
-  ChevronRight,
-  CheckCircle,
-  Users,
+  CheckCircle, 
+  AlertCircle, 
+  User,
   BarChart3,
-  Activity,
-  AlertCircle,
-  Building2,
+  ClipboardList,
+  LogOut,
+  LogIn,
   Timer,
-  FileText,
-  Target,
-  Briefcase
+  TrendingUp,
+  Users,
+  Building2,
+  Activity,
+  Target
 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
+import { Button } from '../../components/ui/button'
+import { Badge } from '../../components/ui/badge'
+import { useAuthStore } from '../../store/authStore'
+import { 
+  shiftsApi, 
+  timeTrackingApi, 
+  locationsApi,
+  usersApi 
+} from '../../lib/api'
+import { 
+  formatTime, 
+  formatDate, 
+  formatDateShort, 
+  calculateHours,
+  isToday,
+  isTomorrow 
+} from '../../lib/utils'
 import toast from 'react-hot-toast'
 
+// Location data helper
+const locations = [
+  { _id: '1', name: 'Main Office', address: '123 Business St', city: 'Downtown' },
+  { _id: '2', name: 'Branch Office', address: '456 Commerce Ave', city: 'Uptown' },
+  { _id: '3', name: 'Warehouse', address: '789 Industrial Blvd', city: 'Industrial District' }
+]
+
 export default function StaffDashboard() {
-  const { user } = useAuthStore()
-  const [isWorking, setIsWorking] = useState(false)
-  const [currentShift, setCurrentShift] = useState(null)
-  const [todaysShifts, setTodaysShifts] = useState([])
-  const [weeklyStats, setWeeklyStats] = useState({
-    hoursWorked: 0,
-    shiftsCompleted: 0,
-    averageShift: 0
+  const { user, logout } = useAuthStore()
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(true)
+  const [clockedIn, setClockedIn] = useState(false)
+  const [currentTimeEntry, setCurrentTimeEntry] = useState(null)
+  const [elapsedTime, setElapsedTime] = useState(0)
+  
+  const [dashboardData, setDashboardData] = useState({
+    upcomingShifts: [],
+    recentTimeEntries: [],
+    weeklyStats: {
+      totalHours: 0,
+      shiftsCompleted: 0,
+      hoursThisWeek: 0,
+      averageRating: 0
+    },
+    todayShift: null,
+    locations: []
   })
-  const [locationStatus, setLocationStatus] = useState({
-    isVerified: false,
-    method: null,
-    accuracy: null
-  })
-  const [todayShifts, setTodayShifts] = useState([])
-  const [upcomingShifts, setUpcomingShifts] = useState([])
-  const [recentActivity, setRecentActivity] = useState([])
 
   useEffect(() => {
-    loadDashboardData()
-    checkLocationStatus()
-  }, [user?.id])
-
-  const loadDashboardData = () => {
-    if (!user?.id) return
-
-    // Get user's shifts for today
-    const today = new Date().toDateString()
-    const userShifts = mockShifts.filter(shift => 
-      shift.assignedTo === user.id && 
-      new Date(shift.startTime).toDateString() === today
-    )
-    setTodaysShifts(userShifts)
-
-    // Get weekly stats
-    const weekStart = new Date()
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay())
-    
-    const userEntries = mockTimeEntries.filter(entry => 
-      entry.userId === user.id &&
-      new Date(entry.clockInTime) >= weekStart
-    )
-
-    const hoursWorked = userEntries.reduce((sum, entry) => sum + (entry.hoursWorked || 0), 0)
-    
-    setWeeklyStats({
-      hoursWorked,
-      shiftsCompleted: userEntries.length,
-      averageShift: 0
-    })
-
-    // Check if currently working
-    const activeEntry = userEntries.find(entry => entry.clockInTime && !entry.clockOutTime)
-    if (activeEntry) {
-      setIsWorking(true)
-      const shift = mockShifts.find(s => s.id === activeEntry.shiftId)
-      setCurrentShift(shift)
+    if (user) {
+      loadDashboardData()
     }
+  }, [user])
 
-    // Today's shifts
-    const todayShiftsList = userShifts.filter(shift => 
-      new Date(shift.startTime).toDateString() === today
-    )
-    setTodayShifts(todayShiftsList)
-
-    // Upcoming shifts (next 7 days)
-    const nextWeek = new Date()
-    nextWeek.setDate(nextWeek.getDate() + 7)
-    const upcoming = userShifts.filter(shift => {
-      const shiftDate = new Date(shift.startTime)
-      return shiftDate > new Date() && shiftDate <= nextWeek
-    }).sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
-    setUpcomingShifts(upcoming.slice(0, 5))
-
-    // Recent activity
-    const recent = [
-      ...userEntries.map(entry => ({
-        type: 'timesheet',
-        date: entry.date,
-        description: `Logged ${entry.hoursWorked} hours at ${getLocationById(entry.locationId)?.name}`,
-        icon: Clock
-      })),
-      ...userShifts.map(shift => ({
-        type: 'shift',
-        date: shift.startTime,
-        description: `Completed shift at ${getLocationById(shift.locationId)?.name}`,
-        icon: Calendar
-      }))
-    ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5)
-    
-    setRecentActivity(recent)
-  }
-
-  const checkLocationStatus = () => {
-    // Mock location verification
-    const mockVerification = () => {
-      setLocationStatus({
-        isVerified: Math.random() > 0.3, // 70% success rate
-        method: Math.random() > 0.5 ? 'WiFi' : 'GPS',
-        accuracy: Math.floor(Math.random() * 20) + 5 // 5-25 meters
-      })
+  // Update elapsed time every second if clocked in
+  useEffect(() => {
+    let interval
+    if (clockedIn && currentTimeEntry?.clockInTime) {
+      interval = setInterval(() => {
+        const start = new Date(currentTimeEntry.clockInTime)
+        const now = new Date()
+        setElapsedTime(Math.floor((now - start) / 1000))
+      }, 1000)
     }
-
-    mockVerification()
-    // Recheck every 30 seconds
-    const interval = setInterval(mockVerification, 30000)
     return () => clearInterval(interval)
+  }, [clockedIn, currentTimeEntry])
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true)
+      
+      // Load user's shifts and time entries
+      const [shiftsResponse, timeEntriesResponse] = await Promise.all([
+        shiftsApi.getUserShifts({ 
+          limit: 10, 
+          sortBy: 'startTime', 
+          sortOrder: 'asc' 
+        }),
+        timeTrackingApi.getTimeEntries({ 
+          limit: 5, 
+          sortBy: 'date', 
+          sortOrder: 'desc' 
+        })
+      ])
+
+      const shifts = shiftsResponse.data.shifts || []
+      const timeEntries = timeEntriesResponse.data.timeEntries || []
+      
+      // Find if user is currently clocked in
+      const currentEntry = timeEntries.find(entry => 
+        entry.status === 'clocked_in' && !entry.clockOutTime
+      )
+      
+      if (currentEntry) {
+        setClockedIn(true)
+        setCurrentTimeEntry(currentEntry)
+      }
+
+      // Calculate today's shift
+      const todayShift = shifts.find(shift => 
+        isToday(shift.startTime) && shift.assignedTo?.id === user.id
+      )
+
+      // Calculate weekly stats
+      const weekStart = new Date()
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+      
+      const weeklyEntries = timeEntries.filter(entry => 
+        new Date(entry.date) >= weekStart && entry.status === 'approved'
+      )
+      
+      const weeklyStats = {
+        totalHours: weeklyEntries.reduce((sum, entry) => sum + (entry.hoursWorked || 0), 0),
+        shiftsCompleted: weeklyEntries.length,
+        hoursThisWeek: weeklyEntries.reduce((sum, entry) => sum + (entry.hoursWorked || 0), 0),
+        averageRating: 4.5 // Mock data
+      }
+
+      // Get upcoming shifts (next 5)
+      const upcomingShifts = shifts
+        .filter(shift => new Date(shift.startTime) > new Date())
+        .slice(0, 5)
+
+      setDashboardData({
+        upcomingShifts,
+        recentTimeEntries: timeEntries.slice(0, 5),
+        weeklyStats,
+        todayShift,
+        locations
+      })
+
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error)
+      toast.error('Failed to load dashboard data')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleClockIn = async () => {
-    if (!locationStatus.isVerified) {
-      toast.error('Location verification required to clock in')
-      return
-    }
-
     try {
-      setIsWorking(true)
+      const location = locations[0] // Default to first location
+      const response = await timeTrackingApi.clockIn(location._id)
+      
+      setClockedIn(true)
+      setCurrentTimeEntry(response.data.timeEntry)
       toast.success('Clocked in successfully!')
+      
+      // Reload dashboard data
       loadDashboardData()
+      
     } catch (error) {
-      toast.error('Failed to clock in')
+      console.error('Clock in failed:', error)
+      toast.error('Failed to clock in. Please try again.')
     }
   }
 
   const handleClockOut = async () => {
     try {
-      setIsWorking(false)
-      setCurrentShift(null)
+      await timeTrackingApi.clockOut(currentTimeEntry._id)
+      
+      setClockedIn(false)
+      setCurrentTimeEntry(null)
+      setElapsedTime(0)
       toast.success('Clocked out successfully!')
+      
+      // Reload dashboard data
       loadDashboardData()
+      
     } catch (error) {
-      toast.error('Failed to clock out')
+      console.error('Clock out failed:', error)
+      toast.error('Failed to clock out. Please try again.')
     }
   }
 
   const getGreeting = () => {
     const hour = new Date().getHours()
     if (hour < 12) return 'Good morning'
-    if (hour < 17) return 'Good afternoon'
+    if (hour < 18) return 'Good afternoon'
     return 'Good evening'
   }
 
   const QuickActionCard = ({ icon: Icon, title, description, link, color = "blue" }) => {
     const colorClasses = {
-      blue: "bg-blue-50 text-blue-600",
-      green: "bg-green-50 text-green-600", 
-      purple: "bg-purple-50 text-purple-600",
-      orange: "bg-orange-50 text-orange-600"
+      blue: "bg-blue-50 text-blue-600 border-blue-200",
+      green: "bg-green-50 text-green-600 border-green-200",
+      orange: "bg-orange-50 text-orange-600 border-orange-200",
+      purple: "bg-purple-50 text-purple-600 border-purple-200",
+      red: "bg-red-50 text-red-600 border-red-200"
     }
     
     return (
-      <Link to={link}>
-        <Card className="hover:shadow-md transition-all duration-200 group cursor-pointer border-l-4 border-l-blue-600">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-lg ${colorClasses[color] || colorClasses.blue}`}>
-                  <Icon className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                    {title}
-                  </h3>
-                  <p className="text-sm text-gray-600">{description}</p>
-                </div>
+      <Link to={link} className="block">
+        <Card className={`hover:shadow-md transition-all duration-200 cursor-pointer border-2 ${colorClasses[color] || colorClasses.blue}`}>
+          <CardContent className="p-4 lg:p-6">
+            <div className="flex items-center gap-3 lg:gap-4">
+              <div className="p-2 rounded-lg bg-white/50 lg:p-3">
+                <Icon className="h-5 w-5 lg:h-6 lg:w-6" />
               </div>
-              <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-gray-900 text-sm lg:text-base truncate">
+                  {title}
+                </h3>
+                <p className="text-xs text-gray-600 lg:text-sm line-clamp-2">{description}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -205,297 +230,277 @@ export default function StaffDashboard() {
     )
   }
 
+  const StatCard = ({ title, value, icon: Icon, color = "blue", subtitle }) => (
+    <Card className="overflow-hidden">
+      <CardContent className="p-4 lg:p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <p className="text-xs font-medium text-gray-600 lg:text-sm">{title}</p>
+            <p className="text-lg font-bold text-gray-900 lg:text-2xl mt-1">{value}</p>
+            {subtitle && (
+              <p className="text-xs text-gray-500 mt-1 lg:text-sm">{subtitle}</p>
+            )}
+          </div>
+          <div className={`p-2 rounded-lg lg:p-3 ${
+            color === 'green' ? 'bg-green-100' :
+            color === 'blue' ? 'bg-blue-100' :
+            color === 'orange' ? 'bg-orange-100' :
+            color === 'purple' ? 'bg-purple-100' : 'bg-gray-100'
+          }`}>
+            <Icon className={`h-5 w-5 lg:h-6 lg:w-6 ${
+              color === 'green' ? 'text-green-600' :
+              color === 'blue' ? 'text-blue-600' :
+              color === 'orange' ? 'text-orange-600' :
+              color === 'purple' ? 'text-purple-600' : 'text-gray-600'
+            }`} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  const formatElapsedTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-8">
-      {/* Welcome Header */}
-      <div className="border-b border-gray-200 pb-6">
-        <div className="flex items-center gap-4">
-          <div className="p-4 bg-blue-100 rounded-lg">
-            <Briefcase className="h-8 w-8 text-blue-600" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Welcome back, {user?.displayName || user?.username}
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Here's your workforce overview for today
-            </p>
-          </div>
+    <div className="space-y-4 p-4 lg:space-y-6 lg:p-6 max-w-7xl mx-auto pb-safe">
+      {/* Header */}
+      <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 lg:text-2xl">
+            {getGreeting()}, {user?.firstName}!
+          </h1>
+          <p className="text-sm text-gray-600 lg:text-base">
+            {clockedIn ? 'You are currently clocked in' : 'Ready to start your workday?'}
+          </p>
+        </div>
+        
+        {/* Clock In/Out Button */}
+        <div className="w-full sm:w-auto">
+          {clockedIn ? (
+            <div className="space-y-2">
+              <div className="text-center">
+                <p className="text-xs text-gray-500 lg:text-sm">Working for</p>
+                <p className="text-lg font-mono font-bold text-green-600 lg:text-xl">
+                  {formatElapsedTime(elapsedTime)}
+                </p>
+              </div>
+              <Button 
+                onClick={handleClockOut}
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
+                size="sm"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Clock Out
+              </Button>
+            </div>
+          ) : (
+            <Button 
+              onClick={handleClockIn}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+              size="sm"
+            >
+              <LogIn className="w-4 h-4 mr-2" />
+              Clock In
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Weekly Performance Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Hours This Week</CardTitle>
-              <Clock className="h-5 w-5 text-green-600" />
+      {/* Today's Shift Alert */}
+      {dashboardData.todayShift && (
+        <Card className="border-l-4 border-l-blue-500 bg-blue-50">
+          <CardContent className="p-4 lg:p-6">
+            <div className="flex items-start gap-3 lg:gap-4">
+              <Calendar className="h-5 w-5 text-blue-600 mt-0.5 lg:h-6 lg:w-6" />
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-blue-900 text-sm lg:text-base">
+                  You have a shift today!
+                </h3>
+                <p className="text-xs text-blue-700 mt-1 lg:text-sm">
+                  {formatTime(dashboardData.todayShift.startTime)} - {formatTime(dashboardData.todayShift.endTime)}
+                  {' at '} 
+                  {locations.find(loc => loc._id === dashboardData.todayShift.locationId)?.name}
+                </p>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-2xl font-bold text-gray-900">{weeklyStats.hoursWorked.toFixed(1)}</div>
-            <p className="text-xs text-gray-500 mt-1">Productive work hours logged</p>
           </CardContent>
         </Card>
+      )}
 
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-gray-600">Shifts Completed</CardTitle>
-              <Calendar className="h-5 w-5 text-blue-600" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-2xl font-bold text-gray-900">{weeklyStats.shiftsCompleted}</div>
-            <p className="text-xs text-gray-500 mt-1">Assignments this week</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-gray-600">Average Shift Duration</CardTitle>
-              <BarChart3 className="h-5 w-5 text-purple-600" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-2xl font-bold text-gray-900">{weeklyStats.averageShift.toFixed(1)}h</div>
-            <p className="text-xs text-gray-500 mt-1">Per shift average</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Today's Schedule */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Today's Schedule
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {todayShifts.length > 0 ? (
-              <div className="space-y-3">
-                {todayShifts.map((shift) => {
-                  const location = getLocationById(shift.locationId)
-                  const duration = ((new Date(shift.endTime) - new Date(shift.startTime)) / (1000 * 60 * 60)).toFixed(1)
-                  const isActive = new Date() >= new Date(shift.startTime) && new Date() <= new Date(shift.endTime)
-                  
-                  return (
-                    <div key={shift.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <Building2 className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{location?.name}</p>
-                          <p className="text-sm text-gray-600">
-                            {formatTime(shift.startTime)} - {formatTime(shift.endTime)} • {duration}h
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant={isActive ? "default" : "secondary"}>
-                        {isActive ? 'Active' : 'Scheduled'}
-                      </Badge>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600">No shifts scheduled for today</p>
-                <p className="text-sm text-gray-500">Enjoy your day off!</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Upcoming Assignments */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Timer className="h-5 w-5" />
-              Upcoming Assignments
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {upcomingShifts.length > 0 ? (
-              <div className="space-y-3">
-                {upcomingShifts.map((shift) => {
-                  const location = getLocationById(shift.locationId)
-                  const duration = ((new Date(shift.endTime) - new Date(shift.startTime)) / (1000 * 60 * 60)).toFixed(1)
-                  
-                  return (
-                    <div key={shift.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="p-1.5 bg-gray-100 rounded">
-                          <MapPin className="h-3 w-3 text-gray-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm text-gray-900">{location?.name}</p>
-                          <p className="text-xs text-gray-600">
-                            {formatDate(shift.startTime)} • {formatTime(shift.startTime)} • {duration}h
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Timer className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600">No upcoming shifts</p>
-                <Link to="/staff/shifts">
-                  <Button variant="outline" size="sm" className="mt-2">
-                    Browse Available Shifts
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Weekly Stats */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-6">
+        <StatCard
+          title="Hours This Week"
+          value={`${dashboardData.weeklyStats.hoursThisWeek.toFixed(1)}h`}
+          icon={Clock}
+          color="blue"
+        />
+        <StatCard
+          title="Shifts Completed"
+          value={dashboardData.weeklyStats.shiftsCompleted}
+          icon={CheckCircle}
+          color="green"
+        />
+        <StatCard
+          title="Total Hours"
+          value={`${dashboardData.weeklyStats.totalHours.toFixed(1)}h`}
+          icon={Timer}
+          color="purple"
+        />
+        <StatCard
+          title="Performance"
+          value={`${(dashboardData.weeklyStats.averageRating * 20).toFixed(0)}%`}
+          icon={TrendingUp}
+          color="orange"
+        />
       </div>
 
       {/* Quick Actions */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-900">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div>
+        <h2 className="text-base font-semibold text-gray-900 mb-3 lg:text-lg lg:mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
           <QuickActionCard
-            icon={Clock}
-            title="Time Tracking"
-            description="View hours worked and performance"
-            link="/staff/time-tracking"
+            icon={Calendar}
+            title="My Shifts"
+            description="View and manage your shifts"
+            link="/staff/shifts"
             color="blue"
           />
           <QuickActionCard
-            icon={Calendar}
-            title="Manage Shifts"
-            description="Book or modify work assignments"
-            link="/staff/shifts"
+            icon={Clock}
+            title="Time Tracking"
+            description="View your time entries"
+            link="/staff/time-tracking"
             color="green"
           />
           <QuickActionCard
-            icon={FileText}
-            title="Documents"
-            description="Access contracts and policies"
-            link="/staff/documents"
-            color="purple"
-          />
-          <QuickActionCard
-            icon={Users}
+            icon={User}
             title="My Profile"
-            description="Update personal information"
+            description="Update your information"
             link="/staff/profile"
-            color="orange"
+            color="purple"
           />
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* Upcoming Shifts */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Recent Activity
+        <CardHeader className="pb-3 lg:pb-4">
+          <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+            <Calendar className="h-5 w-5" />
+            Upcoming Shifts
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {recentActivity.length > 0 ? (
+        <CardContent className="pt-0">
+          {dashboardData.upcomingShifts.length > 0 ? (
             <div className="space-y-3">
-              {recentActivity.map((activity, index) => {
-                const Icon = activity.icon
+              {dashboardData.upcomingShifts.map((shift) => {
+                const location = locations.find(loc => loc._id === shift.locationId)
+                const duration = calculateHours(shift.startTime, shift.endTime)
+                
                 return (
-                  <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Icon className="h-4 w-4 text-blue-600" />
+                  <div key={shift._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg lg:p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Building2 className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-sm lg:text-base truncate">
+                          {location?.name || 'Unknown Location'}
+                        </p>
+                        <p className="text-xs text-gray-600 lg:text-sm">
+                          {formatTime(shift.startTime)} • {duration}h
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{activity.description}</p>
-                      <p className="text-xs text-gray-500">{formatDate(activity.date)}</p>
+                    <div className="text-right flex-shrink-0">
+                      <Badge variant="outline" className="text-xs">
+                        {isToday(shift.startTime) ? 'Today' :
+                         isTomorrow(shift.startTime) ? 'Tomorrow' :
+                         formatDate(shift.startTime)}
+                      </Badge>
                     </div>
                   </div>
                 )
               })}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <Activity className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600">No recent activity</p>
+            <div className="text-center py-6 lg:py-8">
+              <Calendar className="h-10 w-10 text-gray-400 mx-auto mb-3 lg:h-12 lg:w-12" />
+              <p className="text-sm text-gray-600 lg:text-base">No upcoming shifts</p>
+              <p className="text-xs text-gray-500 mt-1 lg:text-sm">Check back later for new assignments</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Current Status */}
+      {/* Recent Time Entries */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Current Status
+        <CardHeader className="pb-3 lg:pb-4">
+          <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+            <ClipboardList className="h-5 w-5" />
+            Recent Time Entries
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${isWorking ? 'bg-green-500' : 'bg-gray-400'}`} />
-              <span className="font-medium">
-                {isWorking ? 'Clocked in' : 'Not clocked in'}
-              </span>
-              {currentShift && (
-                <Badge variant="secondary">
-                  {getLocationById(currentShift.locationId)?.name}
-                </Badge>
-              )}
+        <CardContent className="pt-0">
+          {dashboardData.recentTimeEntries.length > 0 ? (
+            <div className="space-y-3">
+              {dashboardData.recentTimeEntries.map((entry) => {
+                const location = locations.find(loc => loc._id === entry.locationId)
+                
+                return (
+                  <div key={entry._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg lg:p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <Clock className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-sm lg:text-base truncate">
+                          {location?.name || 'Unknown Location'}
+                        </p>
+                        <p className="text-xs text-gray-600 lg:text-sm">
+                          {formatDate(entry.date)} • {entry.hoursWorked?.toFixed(1) || '0.0'}h
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <Badge 
+                        variant={
+                          entry.status === 'approved' ? 'default' :
+                          entry.status === 'pending' ? 'secondary' :
+                          entry.status === 'rejected' ? 'destructive' : 'outline'
+                        }
+                        className="text-xs"
+                      >
+                        {entry.status}
+                      </Badge>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-            
-            <div className="flex gap-2">
-              {!isWorking ? (
-                <Button onClick={handleClockIn} disabled={!locationStatus.isVerified}>
-                  <Play className="h-4 w-4 mr-2" />
-                  Clock In
-                </Button>
-              ) : (
-                <Button variant="destructive" onClick={handleClockOut}>
-                  <Square className="h-4 w-4 mr-2" />
-                  Clock Out
-                </Button>
-              )}
+          ) : (
+            <div className="text-center py-6 lg:py-8">
+              <ClipboardList className="h-10 w-10 text-gray-400 mx-auto mb-3 lg:h-12 lg:w-12" />
+              <p className="text-sm text-gray-600 lg:text-base">No time entries yet</p>
+              <p className="text-xs text-gray-500 mt-1 lg:text-sm">Clock in to start tracking your time</p>
             </div>
-          </div>
-
-          {/* Location Status */}
-          <div className="mt-4 p-3 border rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Wifi className="h-4 w-4" />
-                <span className="text-sm font-medium">Location Verification</span>
-                <Badge variant={locationStatus.isVerified ? "default" : "destructive"}>
-                  {locationStatus.isVerified ? 'Verified' : 'Not Verified'}
-                </Badge>
-              </div>
-              {locationStatus.isVerified && (
-                <span className="text-xs text-muted-foreground">
-                  via {locationStatus.method} ({locationStatus.accuracy}m)
-                </span>
-              )}
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
-
-      {/* Reminders/Alerts */}
-      {!locationStatus.isVerified && (
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Location verification is required to clock in. Please ensure you're connected to the workplace WiFi or your GPS is enabled.
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   )
 } 

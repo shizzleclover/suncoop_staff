@@ -30,13 +30,7 @@ export default function AdminSettings() {
       lateCancel: BUSINESS_RULES.PENALTY_HOURS_PER_CANCELLATION || 1
     },
     
-    // System Settings
-    locationVerification: {
-      enabled: true,
-      wifiRequired: true,
-      gpsBackup: true,
-      radiusMeters: 50
-    },
+
     
     // Notification Settings
     notifications: {
@@ -127,12 +121,7 @@ export default function AdminSettings() {
           noShow: BUSINESS_RULES.PENALTY_HOURS_NO_SHOW || 2,
           lateCancel: BUSINESS_RULES.PENALTY_HOURS_PER_CANCELLATION || 1
         },
-        locationVerification: {
-          enabled: true,
-          wifiRequired: true,
-          gpsBackup: true,
-          radiusMeters: 50
-        },
+
         notifications: {
           shiftReminders: true,
           cancellationAlerts: true,
@@ -302,80 +291,7 @@ export default function AdminSettings() {
         </div>
       </div>
 
-      {/* Location Verification */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center">
-            <MapPin className="w-5 h-5 text-blue-600 mr-3" />
-            <h2 className="text-lg font-semibold text-gray-900">Location Verification</h2>
-          </div>
-          <p className="text-sm text-gray-600 mt-1">Configure location-based attendance tracking</p>
-        </div>
-        <div className="p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-900">Enable Location Verification</h3>
-              <p className="text-sm text-gray-600">Require employees to be at work location to clock in</p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings.locationVerification.enabled}
-                onChange={(e) => handleSettingChange('locationVerification', 'enabled', e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
-          </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-900">WiFi Network Required</h3>
-              <p className="text-sm text-gray-600">Require connection to workplace WiFi network</p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings.locationVerification.wifiRequired}
-                onChange={(e) => handleSettingChange('locationVerification', 'wifiRequired', e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-900">GPS Backup</h3>
-              <p className="text-sm text-gray-600">Use GPS when WiFi verification fails</p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings.locationVerification.gpsBackup}
-                onChange={(e) => handleSettingChange('locationVerification', 'gpsBackup', e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Location Radius (meters)
-            </label>
-            <input
-              type="number"
-              min="10"
-              max="500"
-              value={settings.locationVerification.radiusMeters}
-              onChange={(e) => handleSettingChange('locationVerification', 'radiusMeters', parseInt(e.target.value))}
-              className="w-full md:w-48 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <p className="text-xs text-gray-500 mt-1">Acceptable distance from work location</p>
-          </div>
-        </div>
-      </div>
 
       {/* Notifications */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">

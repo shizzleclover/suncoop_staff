@@ -63,7 +63,7 @@ export default function UserManual() {
                   <h4 className="font-semibold text-gray-900 mb-2">Key Benefits:</h4>
                   <ul className="space-y-1 text-sm text-gray-600">
                     <li>• Eliminates paper timesheets and manual scheduling</li>
-                    <li>• Provides real-time location verification for clock-ins</li>
+                    <li>• Provides real-time clock-in/out functionality</li>
                     <li>• Generates automated reports and analytics</li>
                     <li>• Reduces administrative overhead by 60-80%</li>
                     <li>• Ensures labor law compliance and accurate payroll</li>
@@ -131,7 +131,7 @@ export default function UserManual() {
                 </li>
                 <li className="flex items-start gap-2 text-sm">
                   <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  <span>Location verification status with GPS/WiFi indicators</span>
+                  <span>Real-time clock status and work progress</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm">
                   <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -189,11 +189,11 @@ export default function UserManual() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600 mb-4">Accurate time recording with location verification and detailed reporting.</p>
+              <p className="text-gray-600 mb-4">Accurate time recording with detailed reporting and analytics.</p>
               <ul className="space-y-2">
                 <li className="flex items-start gap-2 text-sm">
                   <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  <span>One-tap clock in/out with location verification</span>
+                  <span>One-tap clock in/out functionality</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm">
                   <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -201,7 +201,7 @@ export default function UserManual() {
                 </li>
                 <li className="flex items-start gap-2 text-sm">
                   <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  <span>GPS and WiFi verification for each clock event</span>
+                  <span>Accurate time tracking for each clock event</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm">
                   <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -394,75 +394,7 @@ export default function UserManual() {
         </div>
       </section>
 
-      {/* Location Verification */}
-      <section className="space-y-6">
-        <h2 className="text-3xl font-bold text-gray-900">Location Verification System</h2>
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-blue-600" />
-                GPS Verification
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 mb-4">
-                Ensures staff members are physically present at assigned work locations using precise GPS coordinates.
-              </p>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Accuracy within 5-25 meters of work location</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Prevents buddy punching and time theft</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Works both indoors and outdoors</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Automatic detection and verification</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wifi className="h-5 w-5 text-green-600" />
-                WiFi Network Verification
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 mb-4">
-                Secondary verification method using specific WiFi networks associated with each work location.
-              </p>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Validates connection to approved WiFi networks</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Backup verification when GPS is unavailable</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Works well in indoor environments</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
-                  <span>Additional security layer for time tracking</span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
 
       {/* Demo Credentials */}
       <section className="space-y-6">

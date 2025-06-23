@@ -1,3 +1,4 @@
+import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { Toaster as ShadcnToaster } from "@/components/ui/toaster"
@@ -6,6 +7,8 @@ import { USER_ROLES } from './lib/utils'
 
 // Components
 import LoginPage from './pages/LoginPage'
+import AdminSetup from './pages/AdminSetup'
+import PasswordReset from './pages/PasswordReset'
 import UserManual from './pages/UserManual'
 import StaffDashboard from './pages/staff/StaffDashboard'
 import StaffShifts from './pages/staff/StaffShifts'
@@ -14,8 +17,10 @@ import StaffProfile from './pages/staff/StaffProfile'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminStaff from './pages/admin/AdminStaff'
 import AdminShifts from './pages/admin/AdminShifts'
+import AdminLocations from './pages/admin/AdminLocations'
 import AdminReports from './pages/admin/AdminReports'
 import AdminSettings from './pages/admin/AdminSettings'
+import AdminProfile from './pages/admin/AdminProfile'
 import Layout from './components/Layout'
 
 // Protected route wrapper
@@ -55,6 +60,13 @@ function PublicRoute({ children }) {
 }
 
 function App() {
+  const { initializeAuth } = useAuthStore()
+
+  // Initialize auth on app load
+  React.useEffect(() => {
+    initializeAuth()
+  }, [initializeAuth])
+
   return (
     <Router
       future={{
@@ -72,6 +84,14 @@ function App() {
                 <LoginPage />
               </PublicRoute>
             } 
+          />
+          <Route 
+            path="/admin-setup" 
+            element={<AdminSetup />} 
+          />
+          <Route 
+            path="/password-reset" 
+            element={<PasswordReset />} 
           />
           <Route 
             path="/manual" 
@@ -138,6 +158,14 @@ function App() {
             } 
           />
           <Route 
+            path="/admin/locations" 
+            element={
+              <ProtectedRoute allowedRoles={[USER_ROLES.ADMIN]}>
+                <AdminLocations />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/admin/reports" 
             element={
               <ProtectedRoute allowedRoles={[USER_ROLES.ADMIN]}>
@@ -150,6 +178,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[USER_ROLES.ADMIN]}>
                 <AdminSettings />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/profile" 
+            element={
+              <ProtectedRoute allowedRoles={[USER_ROLES.ADMIN]}>
+                <AdminProfile />
               </ProtectedRoute>
             } 
           />

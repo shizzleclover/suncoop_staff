@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../../store'
-import { mockShifts, getLocationById } from '../../data/mockData'
+import { shiftsApi } from '../../lib/api'
+import { useToast } from '../../hooks/use-toast'
 import { formatTime, formatDate, SHIFT_STATUS } from '../../lib/utils'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,176 +15,291 @@ import {
   BriefcaseIcon as Briefcase,
   Users,
   Filter,
-  Search
+  Search,
+  Plus,
+  Check,
+  X,
+  Timer,
+  ChevronRight,
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react'
-import toast from 'react-hot-toast'
 
 export default function StaffShifts() {
   const { user } = useAuthStore()
-  const [shifts, setShifts] = useState([])
+  const { toast } = useToast()
+  const [activeTab, setActiveTab] = useState('available')
+  const [isLoading, setIsLoading] = useState(true)
+  const [availableShifts, setAvailableShifts] = useState([])
   const [userShifts, setUserShifts] = useState([])
-  const [selectedTab, setSelectedTab] = useState('available')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterLocation, setFilterLocation] = useState('')
+  const [filterDate, setFilterDate] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [locationFilter, setLocationFilter] = useState('all')
-  const [dateFilter, setDateFilter] = useState('')
 
   useEffect(() => {
     loadShifts()
-  }, [user?.id])
+  }, [user, activeTab])
 
-  const loadShifts = () => {
-    if (!user?.id) return
-
-    // Get all shifts
-    const allShifts = mockShifts
+  useEffect(() => {
+    // Filter user's shifts
+    let filtered = userShifts
     
-    // Filter available shifts (not booked by anyone and still open)
-    const availableShifts = allShifts.filter(shift => 
-      shift.status === SHIFT_STATUS.AVAILABLE && 
-      !shift.assignedTo && 
-      new Date(shift.startTime) > new Date() // Only future shifts
-    )
+    if (searchTerm) {
+      filtered = filtered.filter(shift => {
+        const location = getLocationById(shift.locationId)
+        return location?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               shift.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      })
+    }
     
-    // Get user's booked shifts
-    const myShifts = allShifts.filter(shift => 
-      shift.assignedTo === user.id
-    )
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(shift => shift.status.toLowerCase() === statusFilter)
+    }
     
-    setShifts(availableShifts)
-    setUserShifts(myShifts)
-  }
-
-  const getFilteredShifts = (shiftList) => {
-    let filtered = shiftList
-
     if (locationFilter !== 'all') {
       filtered = filtered.filter(shift => shift.locationId === locationFilter)
     }
+    
+    setUserShifts(filtered)
+  }, [userShifts, searchTerm, statusFilter, locationFilter])
 
-    if (dateFilter) {
-      filtered = filtered.filter(shift => 
-        new Date(shift.startTime).toDateString() === new Date(dateFilter).toDateString()
-      )
+  useEffect(() => {
+    // Filter available shifts
+    let filtered = availableShifts
+    
+    if (searchTerm) {
+      filtered = filtered.filter(shift => {
+        const location = getLocationById(shift.locationId)
+        return location?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               shift.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      })
     }
+    
+    if (locationFilter !== 'all') {
+      filtered = filtered.filter(shift => shift.locationId === locationFilter)
+    }
+    
+    setAvailableShifts(filtered)
+  }, [availableShifts, searchTerm, locationFilter])
 
-    return filtered.sort((a, b) => new Date(a.startTime) - new Date(b.startTime))
+  const loadShifts = async () => {
+    if (!user) return
+    
+    setIsLoading(true)
+    try {
+      if (activeTab === 'available') {
+        // Load available shifts
+        const response = await shiftsApi.getAvailableShifts({
+          startDate: new Date().toISOString(),
+          limit: 50
+        })
+        setAvailableShifts(response.data.shifts || [])
+      } else {
+        // Load user's shifts
+        const response = await shiftsApi.getUserShifts({
+          limit: 50,
+          sortBy: 'startTime',
+          sortOrder: 'desc'
+        })
+        setUserShifts(response.data.shifts || [])
+      }
+    } catch (error) {
+      console.error('Failed to load shifts:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load shifts",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const getFilteredShifts = (shiftList) => {
+    return shiftList.filter(shift => {
+      const location = getLocationById(shift.locationId)
+      const matchesSearch = !searchTerm || 
+        location?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        shift.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      
+      const matchesStatus = statusFilter === 'all' || shift.status.toLowerCase() === statusFilter
+      const matchesLocation = locationFilter === 'all' || shift.locationId === locationFilter
+      
+      return matchesSearch && matchesStatus && matchesLocation
+    })
   }
 
   const handleBookShift = async (shiftId) => {
     try {
-      // In a real app, this would be an API call
-      setShifts(prev => prev.filter(shift => shift.id !== shiftId))
-      setUserShifts(prev => [...prev, { 
-        ...mockShifts.find(s => s.id === shiftId),
-        assignedTo: user.id,
-        status: SHIFT_STATUS.BOOKED
-      }])
+      await shiftsApi.assignShift(shiftId, { userId: user.id })
       
-      toast.success('Shift booked successfully')
+      toast({
+        title: "Success",
+        description: "Shift booked successfully!",
+      })
+      
+      // Refresh the shifts
+      loadShifts()
     } catch (error) {
-      toast.error('Failed to book shift')
+      console.error('Failed to book shift:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to book shift",
+        variant: "destructive"
+      })
     }
   }
 
   const handleCancelShift = async (shiftId) => {
-    if (!window.confirm('Are you sure you want to cancel this shift? This action cannot be undone.')) {
+    const shift = userShifts.find(s => s._id === shiftId)
+    
+    if (!shift) return
+    
+    // Check if shift can be cancelled (24 hours notice)
+    const hoursUntilShift = (new Date(shift.startTime) - new Date()) / (1000 * 60 * 60)
+    
+    if (hoursUntilShift < 24) {
+      toast({
+        title: "Cannot Cancel",
+        description: "Shifts must be cancelled at least 24 hours in advance",
+        variant: "destructive"
+      })
       return
     }
 
     try {
-      // In a real app, this would be an API call
-      const shift = userShifts.find(s => s.id === shiftId)
-      if (shift) {
-        setUserShifts(prev => prev.filter(shift => shift.id !== shiftId))
-        setShifts(prev => [...prev, { 
-          ...shift,
-          assignedTo: null,
-          status: SHIFT_STATUS.AVAILABLE
-        }])
-      }
+      await shiftsApi.unassignShift(shiftId)
       
-      toast.success('Shift cancelled successfully')
+      toast({
+        title: "Success",
+        description: "Shift cancelled successfully",
+      })
+      
+      // Refresh the shifts
+      loadShifts()
     } catch (error) {
-      toast.error('Failed to cancel shift')
+      console.error('Failed to cancel shift:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel shift",
+        variant: "destructive"
+      })
     }
   }
 
   const getUniqueLocations = () => {
-    const allShifts = [...shifts, ...userShifts]
-    const locationIds = [...new Set(allShifts.map(s => s && s.locationId).filter(Boolean))]
-    return locationIds.map(id => getLocationById(id)).filter(Boolean)
+    const allShifts = activeTab === 'available' ? availableShifts : userShifts
+    const locations = allShifts.map(shift => shift.locationId).filter(Boolean)
+    return [...new Map(locations.map(loc => [loc._id, loc])).values()]
+  }
+
+  const getLocationById = (locationId) => {
+    return getUniqueLocations().find(loc => loc._id === locationId)
+  }
+
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'available': return 'bg-blue-100 text-blue-800'
+      case 'booked': return 'bg-green-100 text-green-800'
+      case 'completed': return 'bg-gray-100 text-gray-800'
+      case 'cancelled': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
   }
 
   const ShiftCard = ({ shift, isUserShift = false }) => {
     const location = getLocationById(shift.locationId)
     const shiftDuration = ((new Date(shift.endTime) - new Date(shift.startTime)) / (1000 * 60 * 60))
     const isPastShift = new Date(shift.startTime) < new Date()
+    const canCancel = new Date(shift.startTime) - new Date() > 24 * 60 * 60 * 1000
     
     return (
-      <Card className="hover:shadow-md transition-shadow border-l-4 border-l-blue-600">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <Building2 className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <CardTitle className="text-lg font-semibold text-gray-900">{location?.name || 'Unknown Location'}</CardTitle>
-                <p className="text-sm text-gray-500">{location?.address}</p>
-              </div>
-            </div>
-            <Badge variant={isUserShift ? "default" : "secondary"} className="text-xs font-medium">
-              {isUserShift ? 'Assigned' : 'Available'}
-            </Badge>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="pt-0">
+      <Card className="overflow-hidden hover:shadow-md transition-shadow">
+        <CardContent className="p-4">
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Calendar className="h-4 w-4" />
-                <span className="font-medium">{formatDate(shift.startTime)}</span>
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Building2 className="h-4 w-4 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 text-sm truncate">
+                    {location?.name || 'Unknown Location'}
+                  </h3>
+                  <p className="text-xs text-gray-600 truncate">
+                    {location?.address}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Clock className="h-4 w-4" />
-                <span className="font-medium">{formatTime(shift.startTime)} - {formatTime(shift.endTime)}</span>
-              </div>
+              <Badge className={`text-xs ${getStatusColor(shift.status)}`}>
+                {shift.status}
+              </Badge>
             </div>
-            
-            <div className="flex items-center justify-between pt-2 border-t">
-              <div className="text-right">
-                <p className="text-lg font-bold text-blue-600">{shiftDuration.toFixed(1)}h</p>
-                <p className="text-xs text-gray-500">Duration</p>
+
+            {/* Time and Duration */}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-3 w-3 text-gray-400" />
+                <span className="text-gray-600">
+                  {isToday(shift.startTime) ? 'Today' :
+                   isTomorrow(shift.startTime) ? 'Tomorrow' :
+                   formatDate(shift.startTime)}
+                </span>
               </div>
-              
-              <div className="flex gap-2">
-                {isUserShift ? (
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => handleCancelShift(shift.id)}
-                    disabled={isPastShift}
-                    className="text-xs"
-                  >
-                    {isPastShift ? 'Completed' : 'Cancel'}
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={() => handleBookShift(shift.id)}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-xs"
-                  >
-                    Book Shift
-                  </Button>
-                )}
+              <div className="flex items-center gap-2">
+                <Timer className="h-3 w-3 text-gray-400" />
+                <span className="text-gray-600">{shiftDuration.toFixed(1)}h</span>
               </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-3 w-3 text-gray-400" />
+                <span className="text-gray-600">
+                  {formatTime(shift.startTime)} - {formatTime(shift.endTime)}
+                </span>
+              </div>
+              {shift.assignedTo && (
+                <div className="flex items-center gap-2">
+                  <Users className="h-3 w-3 text-gray-400" />
+                  <span className="text-gray-600 truncate">
+                    {shift.assignedTo.firstName} {shift.assignedTo.lastName}
+                  </span>
+                </div>
+              )}
             </div>
-            
+
+            {/* Description */}
             {shift.description && (
-              <div className="pt-2 border-t">
-                <p className="text-sm text-gray-600">{shift.description}</p>
-              </div>
+              <p className="text-xs text-gray-600 line-clamp-2 bg-gray-50 p-2 rounded">
+                {shift.description}
+              </p>
             )}
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              {isUserShift ? (
+                <Button
+                  onClick={() => handleCancelShift(shift._id)}
+                  disabled={!canCancel}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-xs"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  {canCancel ? 'Cancel' : 'Cannot Cancel'}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => handleBookShift(shift._id)}
+                  size="sm"
+                  className="flex-1 text-xs bg-blue-600 hover:bg-blue-700"
+                >
+                  <Check className="h-3 w-3 mr-1" />
+                  Book Shift
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -214,55 +330,70 @@ export default function StaffShifts() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-              <select
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">All Locations</option>
-                {getUniqueLocations().map((location) => (
-                  <option key={location.id} value={location.id}>
-                    {location.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                type="text"
+                placeholder="Search shifts..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
             </div>
-            
-            <div className="flex items-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setLocationFilter('all')
-                  setDateFilter('')
-                }}
-                className="w-full"
+
+            {/* Status Filter (only for my shifts) */}
+            {activeTab === 'my-shifts' && (
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               >
-                Clear Filters
-              </Button>
-            </div>
+                <option value="all">All Status</option>
+                <option value="booked">Booked</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            )}
+
+            {/* Location Filter */}
+            <select
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            >
+              <option value="all">All Locations</option>
+              {getUniqueLocations().map(location => (
+                <option key={location._id} value={location._id}>
+                  {location.name}
+                </option>
+              ))}
+            </select>
+
+            {/* Clear Filters */}
+            <Button
+              onClick={() => {
+                setSearchTerm('')
+                setStatusFilter('all')
+                setLocationFilter('all')
+              }}
+              variant="outline"
+              size="sm"
+              className="text-sm"
+            >
+              Clear Filters
+            </Button>
           </div>
         </CardContent>
       </Card>
 
       {/* Shifts Tabs */}
-      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="available" className="flex items-center gap-2">
             <Search className="h-4 w-4" />
-            Available Shifts ({getFilteredShifts(shifts).length})
+            Available Shifts ({getFilteredShifts(availableShifts).length})
           </TabsTrigger>
           <TabsTrigger value="my-shifts" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
@@ -272,10 +403,10 @@ export default function StaffShifts() {
         
         <TabsContent value="available" className="mt-6">
           <div className="space-y-4">
-            {getFilteredShifts(shifts).length > 0 ? (
+            {getFilteredShifts(availableShifts).length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {getFilteredShifts(shifts).map((shift) => (
-                  <ShiftCard key={shift.id} shift={shift} />
+                {getFilteredShifts(availableShifts).map((shift) => (
+                  <ShiftCard key={shift._id} shift={shift} />
                 ))}
               </div>
             ) : (
@@ -284,9 +415,9 @@ export default function StaffShifts() {
                   <Search className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No Available Shifts</h3>
                   <p className="text-gray-600">
-                    {locationFilter !== 'all' || dateFilter
+                    {searchTerm || locationFilter !== 'all'
                       ? "No shifts match your current filters."
-                      : "There are no available shifts at this time."}
+                      : "No shifts are currently available for booking."}
                   </p>
                 </CardContent>
               </Card>
@@ -299,7 +430,7 @@ export default function StaffShifts() {
             {getFilteredShifts(userShifts).length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {getFilteredShifts(userShifts).map((shift) => (
-                  <ShiftCard key={shift.id} shift={shift} isUserShift />
+                  <ShiftCard key={shift._id} shift={shift} isUserShift />
                 ))}
               </div>
             ) : (
@@ -308,7 +439,7 @@ export default function StaffShifts() {
                   <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No Assigned Shifts</h3>
                   <p className="text-gray-600">
-                    {locationFilter !== 'all' || dateFilter
+                    {searchTerm || statusFilter !== 'all' || locationFilter !== 'all'
                       ? "No assigned shifts match your current filters."
                       : "You don't have any assigned shifts yet."}
                   </p>
