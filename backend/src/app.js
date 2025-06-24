@@ -22,6 +22,7 @@ const locationRoutes = require('./routes/locations');
 const reportRoutes = require('./routes/reports');
 const notificationRoutes = require('./routes/notifications');
 const settingsRoutes = require('./routes/settings');
+const wifiTrackingRoutes = require('./routes/wifiTracking');
 
 const app = express();
 
@@ -144,6 +145,7 @@ app.use('/api/locations', locationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/wifi-tracking', wifiTrackingRoutes);
 
 // API documentation endpoint (development only)
 if (process.env.NODE_ENV === 'development') {

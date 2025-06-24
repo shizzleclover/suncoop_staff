@@ -96,6 +96,36 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Staff approval system
+  isApproved: {
+    type: Boolean,
+    default: function() {
+      // Admins are auto-approved, staff need approval
+      return this.role === 'admin';
+    }
+  },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: function() {
+      // Admins are auto-approved, staff start as pending
+      return this.role === 'admin' ? 'approved' : 'pending';
+    }
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  approvedAt: {
+    type: Date,
+    default: null
+  },
+  rejectedReason: {
+    type: String,
+    trim: true,
+    default: null
+  },
   lastLogin: {
     type: Date,
     default: null
@@ -238,6 +268,33 @@ userSchema.methods.updateLastLogin = function(ipAddress, userAgent) {
   return this.save();
 };
 
+// Approval management methods
+userSchema.methods.approve = function(approvedByUserId) {
+  this.isApproved = true;
+  this.approvalStatus = 'approved';
+  this.approvedBy = approvedByUserId;
+  this.approvedAt = new Date();
+  this.rejectedReason = null;
+  return this.save();
+};
+
+userSchema.methods.reject = function(reason, rejectedByUserId) {
+  this.isApproved = false;
+  this.approvalStatus = 'rejected';
+  this.rejectedReason = reason;
+  this.approvedBy = rejectedByUserId;
+  this.approvedAt = null;
+  return this.save();
+};
+
+userSchema.methods.isPendingApproval = function() {
+  return this.approvalStatus === 'pending';
+};
+
+userSchema.methods.canLogin = function() {
+  return this.isActive && (this.role === 'admin' || this.isApproved);
+};
+
 userSchema.methods.toJSON = function() {
   const userObject = this.toObject();
   
@@ -271,6 +328,29 @@ userSchema.statics.findAdmins = function() {
 
 userSchema.statics.findStaff = function() {
   return this.find({ role: 'staff', isActive: true });
+};
+
+userSchema.statics.findPendingApproval = function() {
+  return this.find({ 
+    role: 'staff', 
+    approvalStatus: 'pending',
+    isActive: true 
+  }).populate('createdBy', 'firstName lastName email');
+};
+
+userSchema.statics.findApprovedStaff = function() {
+  return this.find({ 
+    role: 'staff', 
+    approvalStatus: 'approved',
+    isActive: true 
+  });
+};
+
+userSchema.statics.findRejectedStaff = function() {
+  return this.find({ 
+    role: 'staff', 
+    approvalStatus: 'rejected' 
+  }).populate('approvedBy', 'firstName lastName email');
 };
 
 const User = mongoose.model('User', userSchema);

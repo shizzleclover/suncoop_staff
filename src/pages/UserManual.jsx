@@ -20,7 +20,7 @@ import {
   Shield,
   UserCheck,
   Home,
-  BookBook,
+  Book,
   Smartphone,
   Wifi,
   Battery,

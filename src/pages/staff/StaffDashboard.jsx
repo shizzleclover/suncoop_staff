@@ -21,6 +21,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { useAuthStore } from '../../store/authStore'
 import { 
   shiftsApi, 
@@ -37,6 +38,7 @@ import {
   isTomorrow 
 } from '../../lib/utils'
 import toast from 'react-hot-toast'
+import WiFiTrackingComponent from '../../components/WiFiTrackingComponent'
 
 // Location data helper
 const locations = [
@@ -368,139 +370,158 @@ export default function StaffDashboard() {
         />
       </div>
 
-      {/* Quick Actions */}
-      <div>
-        <h2 className="text-base font-semibold text-gray-900 mb-3 lg:text-lg lg:mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
-          <QuickActionCard
-            icon={Calendar}
-            title="My Shifts"
-            description="View and manage your shifts"
-            link="/staff/shifts"
-            color="blue"
-          />
-          <QuickActionCard
-            icon={Clock}
-            title="Time Tracking"
-            description="View your time entries"
-            link="/staff/time-tracking"
-            color="green"
-          />
-          <QuickActionCard
-            icon={User}
-            title="My Profile"
-            description="Update your information"
-            link="/staff/profile"
-            color="purple"
-          />
-        </div>
-      </div>
+      {/* Main Content Tabs */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="wifi">WiFi Tracking</TabsTrigger>
+          <TabsTrigger value="actions">Quick Actions</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="overview" className="space-y-6 mt-6">
+          {/* Upcoming Shifts */}
+          <Card>
+            <CardHeader className="pb-3 lg:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                <Calendar className="h-5 w-5" />
+                Upcoming Shifts
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {dashboardData.upcomingShifts.length > 0 ? (
+                <div className="space-y-3">
+                  {dashboardData.upcomingShifts.map((shift) => {
+                    const location = locations.find(loc => loc._id === (shift.locationId?._id || shift.locationId)) || shift.locationId
+                    const duration = calculateHours(shift.startTime, shift.endTime)
+                    
+                    return (
+                      <div key={shift._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg lg:p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <Building2 className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 text-sm lg:text-base truncate">
+                              {location?.name || 'Unknown Location'}
+                            </p>
+                            <p className="text-xs text-gray-600 lg:text-sm">
+                              {formatTime(shift.startTime)} • {duration}h
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <Badge variant="outline" className="text-xs">
+                            {isToday(shift.startTime) ? 'Today' :
+                             isTomorrow(shift.startTime) ? 'Tomorrow' :
+                             formatDate(shift.startTime)}
+                          </Badge>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 lg:py-8">
+                  <Calendar className="h-10 w-10 text-gray-400 mx-auto mb-3 lg:h-12 lg:w-12" />
+                  <p className="text-sm text-gray-600 lg:text-base">No upcoming shifts</p>
+                  <p className="text-xs text-gray-500 mt-1 lg:text-sm">Check back later for new assignments</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Upcoming Shifts */}
-      <Card>
-        <CardHeader className="pb-3 lg:pb-4">
-          <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
-            <Calendar className="h-5 w-5" />
-            Upcoming Shifts
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {dashboardData.upcomingShifts.length > 0 ? (
-            <div className="space-y-3">
-              {dashboardData.upcomingShifts.map((shift) => {
-                const location = locations.find(loc => loc._id === (shift.locationId?._id || shift.locationId)) || shift.locationId
-                const duration = calculateHours(shift.startTime, shift.endTime)
-                
-                return (
-                  <div key={shift._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg lg:p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Building2 className="h-4 w-4 text-blue-600" />
+          {/* Recent Time Entries */}
+          <Card>
+            <CardHeader className="pb-3 lg:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                <ClipboardList className="h-5 w-5" />
+                Recent Time Entries
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {dashboardData.recentTimeEntries.length > 0 ? (
+                <div className="space-y-3">
+                  {dashboardData.recentTimeEntries.map((entry) => {
+                    const location = locations.find(loc => loc._id === (entry.locationId?._id || entry.locationId)) || entry.locationId
+                    
+                    return (
+                      <div key={entry._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg lg:p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-green-100 rounded-lg">
+                            <Clock className="h-4 w-4 text-green-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 text-sm lg:text-base truncate">
+                              {location?.name || 'Unknown Location'}
+                            </p>
+                            <p className="text-xs text-gray-600 lg:text-sm">
+                              {formatDate(entry.date)} • {entry.hoursWorked?.toFixed(1) || '0.0'}h
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <Badge 
+                            variant={
+                              entry.status === 'approved' ? 'default' :
+                              entry.status === 'pending' ? 'secondary' :
+                              entry.status === 'rejected' ? 'destructive' : 'outline'
+                            }
+                            className="text-xs"
+                          >
+                            {entry.status}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 text-sm lg:text-base truncate">
-                          {location?.name || 'Unknown Location'}
-                        </p>
-                        <p className="text-xs text-gray-600 lg:text-sm">
-                          {formatTime(shift.startTime)} • {duration}h
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <Badge variant="outline" className="text-xs">
-                        {isToday(shift.startTime) ? 'Today' :
-                         isTomorrow(shift.startTime) ? 'Tomorrow' :
-                         formatDate(shift.startTime)}
-                      </Badge>
-                    </div>
-                  </div>
-                )
-              })}
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 lg:py-8">
+                  <ClipboardList className="h-10 w-10 text-gray-400 mx-auto mb-3 lg:h-12 lg:w-12" />
+                  <p className="text-sm text-gray-600 lg:text-base">No time entries yet</p>
+                  <p className="text-xs text-gray-500 mt-1 lg:text-sm">Clock in to start tracking your time</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="wifi" className="mt-6">
+          <WiFiTrackingComponent 
+            user={user} 
+            locations={dashboardData.locations} 
+          />
+        </TabsContent>
+        
+        <TabsContent value="actions" className="mt-6">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 mb-3 lg:text-lg lg:mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
+              <QuickActionCard
+                icon={Calendar}
+                title="My Shifts"
+                description="View and manage your shifts"
+                link="/staff/shifts"
+                color="blue"
+              />
+              <QuickActionCard
+                icon={Clock}
+                title="Time Tracking"
+                description="View your time entries"
+                link="/staff/time-tracking"
+                color="green"
+              />
+              <QuickActionCard
+                icon={User}
+                title="My Profile"
+                description="Update your information"
+                link="/staff/profile"
+                color="purple"
+              />
             </div>
-          ) : (
-            <div className="text-center py-6 lg:py-8">
-              <Calendar className="h-10 w-10 text-gray-400 mx-auto mb-3 lg:h-12 lg:w-12" />
-              <p className="text-sm text-gray-600 lg:text-base">No upcoming shifts</p>
-              <p className="text-xs text-gray-500 mt-1 lg:text-sm">Check back later for new assignments</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Recent Time Entries */}
-      <Card>
-        <CardHeader className="pb-3 lg:pb-4">
-          <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
-            <ClipboardList className="h-5 w-5" />
-            Recent Time Entries
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {dashboardData.recentTimeEntries.length > 0 ? (
-            <div className="space-y-3">
-              {dashboardData.recentTimeEntries.map((entry) => {
-                const location = locations.find(loc => loc._id === (entry.locationId?._id || entry.locationId)) || entry.locationId
-                
-                return (
-                  <div key={entry._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg lg:p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <Clock className="h-4 w-4 text-green-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 text-sm lg:text-base truncate">
-                          {location?.name || 'Unknown Location'}
-                        </p>
-                        <p className="text-xs text-gray-600 lg:text-sm">
-                          {formatDate(entry.date)} • {entry.hoursWorked?.toFixed(1) || '0.0'}h
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0">
-                      <Badge 
-                        variant={
-                          entry.status === 'approved' ? 'default' :
-                          entry.status === 'pending' ? 'secondary' :
-                          entry.status === 'rejected' ? 'destructive' : 'outline'
-                        }
-                        className="text-xs"
-                      >
-                        {entry.status}
-                      </Badge>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-6 lg:py-8">
-              <ClipboardList className="h-10 w-10 text-gray-400 mx-auto mb-3 lg:h-12 lg:w-12" />
-              <p className="text-sm text-gray-600 lg:text-base">No time entries yet</p>
-              <p className="text-xs text-gray-500 mt-1 lg:text-sm">Clock in to start tracking your time</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 } 

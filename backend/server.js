@@ -43,6 +43,15 @@ initializeSocket(server);
 const gracefulShutdown = (signal) => {
   logger.info(`Received ${signal}. Starting graceful shutdown...`);
   
+  // Stop cron jobs first
+  try {
+    const cronJobService = require('./src/services/cronJobService');
+    cronJobService.stopAllJobs();
+    logger.info('Cron jobs stopped');
+  } catch (error) {
+    logger.error('Error stopping cron jobs:', error);
+  }
+  
   server.close(() => {
     logger.info('HTTP server closed');
     
@@ -82,6 +91,11 @@ async function startServer() {
     await connectDB();
     logger.info('Database connected successfully');
     
+    // Initialize cron jobs for WiFi tracking and auto-unbooking
+    const cronJobService = require('./src/services/cronJobService');
+    cronJobService.initializeJobs();
+    logger.info('WiFi tracking and auto-unbooking cron jobs initialized');
+    
     // Start listening
     server.listen(PORT, () => {
       logger.info(`🚀 SunCoop Staff Management Server started`);
@@ -92,6 +106,7 @@ async function startServer() {
       if (NODE_ENV === 'development') {
         logger.info(`📋 API Documentation: http://localhost:${PORT}/api/docs`);
         logger.info(`🔍 Health Check: http://localhost:${PORT}/api/health`);
+        logger.info(`📶 WiFi Tracking Health: http://localhost:${PORT}/api/wifi-tracking/health`);
       }
     });
     

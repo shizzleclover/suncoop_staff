@@ -29,9 +29,57 @@ const shiftSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['AVAILABLE', 'BOOKED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'],
+    enum: ['AVAILABLE', 'BOOKED', 'COMPLETED', 'CANCELLED', 'NO_SHOW', 'AUTO_UNBOOKED'],
     default: 'AVAILABLE',
     index: true
+  },
+  autoUnbooking: {
+    isAutoUnbookingEnabled: {
+      type: Boolean,
+      default: true
+    },
+    gracePeriodMinutes: {
+      type: Number,
+      default: 10,
+      min: [1, 'Grace period must be at least 1 minute']
+    },
+    autoUnbookedAt: {
+      type: Date,
+      default: null
+    },
+    autoUnbookedReason: {
+      type: String,
+      trim: true
+    },
+    noShowExplanation: {
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      explanation: {
+        type: String,
+        trim: true,
+        maxlength: [1000, 'Explanation cannot exceed 1000 characters']
+      },
+      submittedAt: {
+        type: Date
+      },
+      isApproved: {
+        type: Boolean,
+        default: false
+      },
+      reviewedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      reviewedAt: {
+        type: Date
+      },
+      adminNotes: {
+        type: String,
+        trim: true
+      }
+    }
   },
   description: {
     type: String,

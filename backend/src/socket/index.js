@@ -111,6 +111,64 @@ const initializeSocket = (server) => {
       }
     });
 
+    // Handle WiFi tracking events
+    socket.on('wifi:subscribe', (data) => {
+      if (data.locationId) {
+        socket.join(`wifi:location:${data.locationId}`);
+        logger.info(`User ${socket.userEmail} subscribed to WiFi updates for location ${data.locationId}`);
+      }
+    });
+
+    socket.on('wifi:unsubscribe', (data) => {
+      if (data.locationId) {
+        socket.leave(`wifi:location:${data.locationId}`);
+        logger.info(`User ${socket.userEmail} unsubscribed from WiFi updates for location ${data.locationId}`);
+      }
+    });
+
+    socket.on('wifi:status', async (data) => {
+      try {
+        // Handle real-time WiFi status updates
+        const WiFiTrackingService = require('../services/wifiTrackingService');
+        const result = await WiFiTrackingService.reportWiFiStatus(socket.userId, data);
+        
+        if (result.success) {
+          // Emit confirmation back to the user
+          socket.emit('wifi:status:confirmed', {
+            success: true,
+            wifiStatus: result.wifiStatus
+          });
+          
+          // Emit to location room for real-time monitoring
+          if (data.locationId) {
+            socket.to(`wifi:location:${data.locationId}`).emit('wifi:status:update', {
+              userId: socket.userId,
+              userEmail: socket.userEmail,
+              ...result.wifiStatus
+            });
+          }
+          
+          // Emit to admins for monitoring
+          socket.to('admins').emit('wifi:status:update', {
+            userId: socket.userId,
+            userEmail: socket.userEmail,
+            ...result.wifiStatus
+          });
+        } else {
+          socket.emit('wifi:status:error', {
+            success: false,
+            message: result.message
+          });
+        }
+      } catch (error) {
+        logger.error('WiFi status socket error:', error);
+        socket.emit('wifi:status:error', {
+          success: false,
+          message: 'Failed to process WiFi status'
+        });
+      }
+    });
+
     // Handle disconnection
     socket.on('disconnect', (reason) => {
       logger.info(`User disconnected: ${socket.userEmail} (${socket.id}) - Reason: ${reason}`);
@@ -207,6 +265,67 @@ const emitTimeTrackingUpdate = (userId, data) => {
   }
 };
 
+/**
+ * Emit WiFi status update
+ */
+const emitWiFiStatusUpdate = (userId, locationId, data) => {
+  if (io) {
+    // Emit to specific user
+    io.to(`user:${userId}`).emit('wifi:status:update', data);
+    // Emit to location room
+    if (locationId) {
+      io.to(`wifi:location:${locationId}`).emit('wifi:status:update', {
+        ...data,
+        userId
+      });
+    }
+    // Emit to admins
+    io.to('admins').emit('wifi:status:update', {
+      ...data,
+      userId
+    });
+  }
+};
+
+/**
+ * Emit auto clock out notification
+ */
+const emitAutoClockOut = (userId, locationId, data) => {
+  if (io) {
+    // Emit to specific user
+    io.to(`user:${userId}`).emit('timeTracking:auto_clock_out', data);
+    // Emit to location room
+    if (locationId) {
+      io.to(`wifi:location:${locationId}`).emit('timeTracking:auto_clock_out', {
+        ...data,
+        userId
+      });
+    }
+    // Emit to admins
+    io.to('admins').emit('timeTracking:auto_clock_out', {
+      ...data,
+      userId
+    });
+  }
+};
+
+/**
+ * Emit auto-unbooking notification
+ */
+const emitAutoUnbooking = (originalUserId, shiftId, data) => {
+  if (io) {
+    // Emit to specific user
+    io.to(`user:${originalUserId}`).emit('shift:auto_unbooked', data);
+    // Emit to shift room
+    io.to(`shift:${shiftId}`).emit('shift:auto_unbooked', data);
+    // Emit to admins
+    io.to('admins').emit('shift:auto_unbooked', {
+      ...data,
+      originalUserId
+    });
+  }
+};
+
 module.exports = {
   initializeSocket,
   getIO,
@@ -216,5 +335,8 @@ module.exports = {
   emitToAll,
   emitShiftUpdate,
   emitNotification,
-  emitTimeTrackingUpdate
+  emitTimeTrackingUpdate,
+  emitWiFiStatusUpdate,
+  emitAutoClockOut,
+  emitAutoUnbooking
 }; 

@@ -9,6 +9,7 @@ import { USER_ROLES } from './lib/utils'
 import LoginPage from './pages/LoginPage'
 import AdminSetup from './pages/AdminSetup'
 import PasswordReset from './pages/PasswordReset'
+import StaffRegister from './pages/StaffRegister'
 import UserManual from './pages/UserManual'
 import StaffDashboard from './pages/staff/StaffDashboard'
 import StaffShifts from './pages/staff/StaffShifts'
@@ -22,6 +23,7 @@ import AdminLocations from './pages/admin/AdminLocations'
 import AdminReports from './pages/admin/AdminReports'
 import AdminSettings from './pages/admin/AdminSettings'
 import AdminProfile from './pages/admin/AdminProfile'
+import AdminWiFiTracking from './pages/admin/AdminWiFiTracking'
 import Layout from './components/Layout'
 
 // Protected route wrapper
@@ -89,6 +91,14 @@ function App() {
           <Route 
             path="/admin-setup" 
             element={<AdminSetup />} 
+          />
+          <Route 
+            path="/staff-register" 
+            element={
+              <PublicRoute>
+                <StaffRegister />
+              </PublicRoute>
+            } 
           />
           <Route 
             path="/password-reset" 
@@ -199,6 +209,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[USER_ROLES.ADMIN]}>
                 <AdminProfile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/wifi-tracking" 
+            element={
+              <ProtectedRoute allowedRoles={[USER_ROLES.ADMIN]}>
+                <AdminWiFiTracking />
               </ProtectedRoute>
             } 
           />

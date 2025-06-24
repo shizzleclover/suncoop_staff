@@ -34,6 +34,13 @@ router.get('/profile', usersController.getProfile);
 router.get('/stats', usersController.getUserStats);
 
 /**
+ * @route   GET /api/users/pending-approvals
+ * @desc    Get pending staff approvals
+ * @access  Private/Admin
+ */
+router.get('/pending-approvals', requireAdmin, usersController.getPendingApprovals);
+
+/**
  * @route   GET /api/users/:id
  * @desc    Get user by ID
  * @access  Private/Admin
@@ -67,5 +74,26 @@ router.post('/:id/deactivate', requireAdmin, usersController.deactivateUser);
  * @access  Private/Admin
  */
 router.post('/:id/reactivate', requireAdmin, usersController.reactivateUser);
+
+/**
+ * @route   POST /api/users/:id/approve
+ * @desc    Approve staff member
+ * @access  Private/Admin
+ */
+router.post('/:id/approve', requireAdmin, usersController.approveStaff);
+
+/**
+ * @route   POST /api/users/:id/reject
+ * @desc    Reject staff member
+ * @access  Private/Admin
+ */
+router.post('/:id/reject', requireAdmin, usersController.rejectStaff);
+
+/**
+ * @route   DELETE /api/users/:id
+ * @desc    Permanently delete user (admin only)
+ * @access  Private/Admin
+ */
+router.delete('/:id', requireAdmin, usersController.deleteUser);
 
 module.exports = router; 

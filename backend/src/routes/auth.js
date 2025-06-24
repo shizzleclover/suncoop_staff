@@ -32,15 +32,15 @@ const registerValidation = [
     .trim()
     .notEmpty()
     .withMessage('First name is required')
-    .isLength({ min: 2, max: 50 })
-    .withMessage('First name must be between 2 and 50 characters'),
+    .isLength({ min: 1, max: 50 })
+    .withMessage('First name must be between 1 and 50 characters'),
   
   body('lastName')
     .trim()
     .notEmpty()
     .withMessage('Last name is required')
-    .isLength({ min: 2, max: 50 })
-    .withMessage('Last name must be between 2 and 50 characters'),
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Last name must be between 1 and 50 characters'),
   
   body('email')
     .isEmail()
@@ -48,7 +48,7 @@ const registerValidation = [
     .withMessage('Please provide a valid email address'),
   
   body('username')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ min: 3, max: 30 })
     .withMessage('Username must be between 3 and 30 characters')
@@ -56,10 +56,8 @@ const registerValidation = [
     .withMessage('Username can only contain letters, numbers, and underscores'),
   
   body('password')
-    .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters long')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long'),
   
   body('confirmPassword')
     .custom((value, { req }) => {
@@ -73,19 +71,22 @@ const registerValidation = [
     .trim()
     .notEmpty()
     .withMessage('Organization name is required')
-    .isLength({ min: 2, max: 100 })
-    .withMessage('Organization name must be between 2 and 100 characters'),
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Organization name must be between 1 and 100 characters'),
   
   body('organizationType')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
-    .isLength({ min: 2, max: 50 })
-    .withMessage('Organization type must be between 2 and 50 characters'),
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Organization type must be between 1 and 50 characters'),
   
   body('phone')
-    .optional()
-    .isMobilePhone()
+    .optional({ checkFalsy: true })
+    .trim()
+    .matches(/^[\+]?[\d\s\-\(\)\.]+$/)
     .withMessage('Please provide a valid phone number')
+    .isLength({ min: 8, max: 25 })
+    .withMessage('Phone number must be between 8 and 25 characters')
 ];
 
 const loginValidation = [
@@ -152,6 +153,61 @@ const refreshTokenValidation = [
     .withMessage('Refresh token is required')
 ];
 
+const staffRegisterValidation = [
+  body('firstName')
+    .trim()
+    .notEmpty()
+    .withMessage('First name is required')
+    .isLength({ min: 1, max: 50 })
+    .withMessage('First name must be between 1 and 50 characters'),
+  
+  body('lastName')
+    .trim()
+    .notEmpty()
+    .withMessage('Last name is required')
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Last name must be between 1 and 50 characters'),
+  
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email address'),
+  
+  body('username')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ min: 3, max: 30 })
+    .withMessage('Username must be between 3 and 30 characters')
+    .matches(/^[a-zA-Z0-9_]+$/)
+    .withMessage('Username can only contain letters, numbers, and underscores'),
+  
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long'),
+  
+  body('confirmPassword')
+    .custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Password confirmation does not match password');
+      }
+      return true;
+    }),
+  
+  body('phone')
+    .optional({ checkFalsy: true })
+    .trim()
+    .matches(/^[\+]?[\d\s\-\(\)\.]+$/)
+    .withMessage('Please provide a valid phone number')
+    .isLength({ min: 8, max: 25 })
+    .withMessage('Phone number must be between 8 and 25 characters'),
+  
+  body('department')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Department must be between 1 and 100 characters')
+];
+
 // Routes
 
 /**
@@ -168,6 +224,18 @@ router.get('/system-status', authController.getSystemStatus);
  */
 router.post('/register', 
   authController.register
+);
+
+/**
+ * @route   POST /api/auth/staff-register
+ * @desc    Staff self-registration (requires admin approval)
+ * @access  Public
+ */
+router.post('/staff-register',
+  authLimiter,
+  staffRegisterValidation,
+  validateRequest,
+  authController.staffRegister
 );
 
 /**

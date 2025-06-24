@@ -25,7 +25,8 @@ import {
   Bell,
   Menu,
   BookOpen,
-  MapPin
+  MapPin,
+  Wifi
 } from 'lucide-react'
 
 const staffMenuItems = [
@@ -41,6 +42,7 @@ const adminMenuItems = [
   { icon: Users, label: 'Staff', href: '/admin/staff' },
   { icon: Calendar, label: 'Shifts', href: '/admin/shifts' },
   { icon: MapPin, label: 'Locations', href: '/admin/locations' },
+  { icon: Wifi, label: 'WiFi Tracking', href: '/admin/wifi-tracking' },
   { icon: BarChart3, label: 'Reports', href: '/admin/reports' },
   { icon: User, label: 'Profile', href: '/admin/profile' },
   { icon: Settings, label: 'Settings', href: '/admin/settings' },

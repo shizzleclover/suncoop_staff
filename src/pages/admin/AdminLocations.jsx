@@ -10,7 +10,11 @@ import {
   Mail,
   Users,
   Filter,
-  MoreVertical
+  MoreVertical,
+  Wifi,
+  WifiOff,
+  Activity,
+  Shield
 } from 'lucide-react'
 
 import { Button } from '../../components/ui/button'
@@ -18,8 +22,10 @@ import { Input } from '../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { Badge } from '../../components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { useToast } from '../../hooks/use-toast'
-import { locationsApi } from '../../lib/api'
+import { locationsApi, wifiTrackingApi } from '../../lib/api'
 import AddLocationModal from '../../components/AddLocationModal'
 import AdminProtection from '../../components/AdminProtection'
 
@@ -32,6 +38,9 @@ export default function AdminLocations() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [showAddModal, setShowAddModal] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [wifiStats, setWifiStats] = useState({})
+  const [selectedLocation, setSelectedLocation] = useState(null)
+  const [loadingWifi, setLoadingWifi] = useState(false)
 
   useEffect(() => {
     loadLocations()
@@ -126,6 +135,48 @@ export default function AdminLocations() {
     }
   }
 
+  const loadWifiStats = async (locationId) => {
+    try {
+      setLoadingWifi(true)
+      const response = await wifiTrackingApi.getWiFiTrackingStats(locationId)
+      if (response.success) {
+        setWifiStats(prev => ({
+          ...prev,
+          [locationId]: response.data.stats
+        }))
+      }
+    } catch (error) {
+      console.error('Error loading WiFi stats:', error)
+    } finally {
+      setLoadingWifi(false)
+    }
+  }
+
+  const handleForceDisconnect = async (userId, locationId, reason = 'Admin action') => {
+    try {
+      const response = await wifiTrackingApi.forceDisconnect(userId, locationId, reason)
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "User disconnected successfully",
+        })
+        // Reload WiFi stats
+        loadWifiStats(locationId)
+      }
+    } catch (error) {
+      console.error('Error forcing disconnect:', error)
+      toast({
+        title: "Error",
+        description: "Failed to disconnect user",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const getWifiStatusColor = (isTrackingEnabled) => {
+    return isTrackingEnabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+  }
+
   const getLocationTypes = () => {
     const types = [...new Set(locations.map(location => location.type))]
     return types.filter(Boolean)
@@ -147,7 +198,8 @@ export default function AdminLocations() {
     total: locations.length,
     active: locations.filter(l => l.isActive).length,
     inactive: locations.filter(l => !l.isActive).length,
-    types: getLocationTypes().length
+    types: getLocationTypes().length,
+    wifiEnabled: locations.filter(l => l.wifiSettings?.isTrackingEnabled).length
   }
 
   if (loading) {
@@ -184,7 +236,7 @@ export default function AdminLocations() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           <div className="bg-white rounded-lg border p-6">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -229,6 +281,18 @@ export default function AdminLocations() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Location Types</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.types}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Wifi className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">WiFi Enabled</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.wifiEnabled}</p>
               </div>
             </div>
           </div>
@@ -330,6 +394,12 @@ export default function AdminLocations() {
                           <Badge variant={location.isActive ? "default" : "secondary"}>
                             {location.isActive ? "Active" : "Inactive"}
                           </Badge>
+                          {location.wifiSettings?.isTrackingEnabled && (
+                            <Badge className={getWifiStatusColor(location.wifiSettings.isTrackingEnabled)}>
+                              <Wifi className="h-3 w-3 mr-1" />
+                              WiFi Tracking
+                            </Badge>
+                          )}
                         </div>
                         
                         <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
@@ -357,12 +427,32 @@ export default function AdminLocations() {
                             <Users className="h-4 w-4 mr-1" />
                             Capacity: {location.capacity}
                           </div>
+
+                          {location.wifiSettings?.ssid && (
+                            <div className="flex items-center">
+                              <Wifi className="h-4 w-4 mr-1" />
+                              WiFi: {location.wifiSettings.ssid}
+                            </div>
+                          )}
                         </div>
                         
                         {location.description && (
                           <p className="mt-2 text-sm text-gray-600">
                             {location.description}
                           </p>
+                        )}
+
+                        {location.wifiSettings?.isTrackingEnabled && (
+                          <div className="mt-2 flex items-center gap-4 text-xs text-green-600">
+                            <div className="flex items-center">
+                              <Activity className="h-3 w-3 mr-1" />
+                              Auto Clock In: {location.wifiSettings.graceMinutesClockIn || 5} min grace
+                            </div>
+                            <div className="flex items-center">
+                              <Shield className="h-3 w-3 mr-1" />
+                              Auto Clock Out: {location.wifiSettings.graceMinutesClockOut || 10} min grace
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -378,6 +468,17 @@ export default function AdminLocations() {
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
+                        {location.wifiSettings?.isTrackingEnabled && (
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setSelectedLocation(location)
+                              loadWifiStats(location._id)
+                            }}
+                          >
+                            <Wifi className="h-4 w-4 mr-2" />
+                            Monitor WiFi
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem 
                           onClick={() => handleToggleStatus(location._id)}
                         >

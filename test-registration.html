@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Registration</title>
+</head>
+<body>
+    <h1>Test Staff Registration</h1>
+    
+    <form id="testForm">
+        <div>
+            <label>First Name: <input type="text" id="firstName" value="John" required></label>
+        </div>
+        <div>
+            <label>Last Name: <input type="text" id="lastName" value="Doe" required></label>
+        </div>
+        <div>
+            <label>Email: <input type="email" id="email" value="john.doe@example.com" required></label>
+        </div>
+        <div>
+            <label>Username: <input type="text" id="username" value="" placeholder="(optional)"></label>
+        </div>
+        <div>
+            <label>Password: <input type="password" id="password" value="Password123" required></label>
+        </div>
+        <div>
+            <label>Confirm Password: <input type="password" id="confirmPassword" value="Password123" required></label>
+        </div>
+        <div>
+            <label>Phone: <input type="tel" id="phone" value="" placeholder="(optional)"></label>
+        </div>
+        <div>
+            <label>Department: <input type="text" id="department" value="" placeholder="(optional)"></label>
+        </div>
+        <button type="submit">Register</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('testForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                username: document.getElementById('username').value || undefined,
+                password: document.getElementById('password').value,
+                confirmPassword: document.getElementById('confirmPassword').value,
+                phone: document.getElementById('phone').value || undefined,
+                department: document.getElementById('department').value || undefined
+            };
+            
+            // Remove undefined fields
+            Object.keys(formData).forEach(key => {
+                if (formData[key] === undefined || formData[key] === '') {
+                    delete formData[key];
+                }
+            });
+            
+            console.log('Sending data:', formData);
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/auth/staff-register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                console.log('Response:', result);
+                
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                
+                if (!response.ok) {
+                    console.error('Error response:', result);
+                }
+            } catch (error) {
+                console.error('Network error:', error);
+                document.getElementById('result').innerHTML = '<pre>Network error: ' + error.message + '</pre>';
+            }
+        });
+    </script>
+</body>
+</html> 
