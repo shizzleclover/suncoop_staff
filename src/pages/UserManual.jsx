@@ -1,452 +1,881 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
+import React, { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Badge } from '../components/ui/badge'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Separator } from '../components/ui/separator'
 import { 
-  Users, 
   Calendar, 
-  Clock, 
   MapPin, 
-  Shield, 
-  BarChart3,
-  Building2,
-  UserCheck,
-  Activity,
-  AlertTriangle,
-  CheckCircle,
-  Wifi,
-  FileText,
+  User, 
   Settings,
-  Target,
-  Timer,
-  ClipboardList,
-  TrendingUp,
-  Bell,
+  Phone,
+  Mail,
+  AlertCircle,
   Search,
-  BookOpen,
-  ChevronRight,
-  Home,
+  Building2,
   LogIn,
+  Timer,
+  Bell,
+  Shield,
+  UserCheck,
+  Home,
+  BookBook,
+  Smartphone,
+  Wifi,
+  Battery,
+  HelpCircle,
+  Info,
+  Star,
+  ChevronDown,
+  ChevronUp,
+  Navigation,
+  Camera,
+  Download,
+  Users,
+  BarChart3,
+  Cog,
   UserPlus,
-  CalendarPlus,
-  MapPinIcon,
+  FileText,
+  Clock,
+  CheckCircle,
+  XCircle,
   Eye,
   Edit,
   Trash2,
-  Download,
-  Upload,
-  PhoneCall,
-  Mail,
-  Key,
-  PlusCircle
+  Plus,
+  Filter,
+  Calendar as CalendarIcon,
+  TrendingUp,
+  DollarSign,
+  Database,
+  Activity,
+  Globe,
+  Lock,
+  Zap,
+  Target,
+  Crown,
+  Briefcase,
+  PieChart,
+  RefreshCw,
+  Archive,
+  UserX,
+  MapPinIcon,
+  ClipboardList,
+  MessageSquare,
+  Sliders
 } from 'lucide-react'
 
-export default function UserManual() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeSection, setActiveSection] = useState(null);
+const UserManual = () => {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [activeSection, setActiveSection] = useState('')
 
-  // Comprehensive feature sections
   const sections = [
     {
       id: 'getting-started',
-      title: 'Getting Started',
-      icon: <BookOpen className="h-6 w-6 text-blue-600" />,
-      description: 'Learn the basics of using SunCoop Staff Management System',
+      title: "🚀 Getting Started as Admin",
+      icon: <Crown className="h-5 w-5" />,
+      description: "Master admin access and understand your comprehensive dashboard",
       content: [
         {
-          title: 'First Time Login',
-          icon: <LogIn className="h-5 w-5 text-green-600" />,
-          description: 'How to access the system for the first time',
+          subtitle: "First Time Admin Login",
+          icon: <LogIn className="h-4 w-4 text-green-600" />,
+          description: "Access your administrative dashboard and understand admin privileges",
           steps: [
-            'Open your web browser and go to the SunCoop application URL',
-            'For Admin setup: Click "Setup Organization" if no admin exists',
-            'For Staff: Use the credentials provided by your administrator',
-            'Enter your username or email and password',
-            'Click "Sign In" to access your dashboard',
-            'Change your password in Profile settings for security'
+            "Login with your admin credentials provided during system setup",
+            "Notice the expanded navigation menu with admin-only sections",
+            "Your dashboard shows system-wide statistics and all user activities",
+            "Admin badge appears next to your name confirming elevated privileges",
+            "Explore each section: Staff, Shifts, Locations, Reports, and Settings",
+            "Set up your admin profile with contact information and preferences"
           ],
           tips: [
-            'The system works on any device - phone, tablet, or computer',
-            'Add the app to your home screen for quick access',
-            'Use "Remember Me" on trusted devices'
+            "Admin accounts have full system access - use responsibly",
+            "Your actions are logged for audit and security purposes",
+            "Admin dashboard shows real-time data across all locations",
+            "Bookmark the admin dashboard for quick daily access"
           ]
         },
         {
-          title: 'Understanding Your Dashboard',
-          icon: <Home className="h-5 w-5 text-blue-600" />,
-          description: 'Navigate your personalized dashboard',
+          subtitle: "Understanding the Admin Dashboard",
+          icon: <BarChart3 className="h-4 w-4 text-blue-600" />,
+          description: "Navigate your comprehensive administrative control center",
           steps: [
-            'Dashboard shows your most important information at a glance',
-            'Staff see: upcoming shifts, time tracking status, recent activities',
-            'Admins see: system overview, pending approvals, staff activity',
-            'Quick actions are available for common tasks',
-            'Notifications appear in the top-right corner'
+            "View total staff count, active shifts, and system-wide metrics",
+            "Monitor today's activities across all locations in real-time",
+            "Check recent staff activities, time entries, and system alerts",
+            "Access quick actions for common admin tasks like adding staff",
+            "Review upcoming shifts requiring attention or approval",
+            "Use dashboard filters to focus on specific locations or time periods"
           ],
           tips: [
-            'Dashboard updates in real-time',
-            'Click on cards for detailed views',
-            'Use the sidebar menu to navigate'
+            "Dashboard cards are clickable for detailed views",
+            "Use the refresh button to update real-time data",
+            "Dashboard widgets can be customized in Settings",
+            "Critical alerts appear prominently at the top"
+          ]
+        },
+        {
+          subtitle: "Admin Navigation & Permissions",
+          icon: <Shield className="h-4 w-4 text-purple-600" />,
+          description: "Master the administrative interface and understand your capabilities",
+          steps: [
+            "Navigate using the expanded sidebar with admin-only sections",
+            "Access Staff Management to control user accounts and permissions",
+            "Use Shift Management for bulk operations and scheduling",
+            "Visit Locations to manage work sites and geographic data",
+            "Check Reports for comprehensive analytics and insights",
+            "Configure system-wide Settings and company preferences"
+          ],
+          tips: [
+            "Admin sections are clearly marked with distinctive icons",
+            "Some actions require confirmation for security",
+            "Help tooltips appear when hovering over complex features",
+            "Admin features may have additional loading time due to data complexity"
           ]
         }
       ]
     },
     {
-      id: 'staff-features',
-      title: 'Staff Features',
-      icon: <Users className="h-6 w-6 text-green-600" />,
-      description: 'Everything staff members need to know about using the system',
+      id: 'staff-management',
+      title: "👥 Staff Management",
+      icon: <Users className="h-5 w-5" />,
+      description: "Complete control over staff accounts, roles, and permissions",
       content: [
         {
-          title: 'Managing Your Shifts',
-          icon: <Calendar className="h-5 w-5 text-purple-600" />,
-          description: 'View, book, and manage your work shifts',
+          subtitle: "Adding New Staff Members",
+          icon: <UserPlus className="h-4 w-4 text-green-600" />,
+          description: "Create and configure new staff accounts with proper access levels",
           steps: [
-            'Go to "Shifts" from the sidebar menu',
-            'View "My Shifts" tab to see your assigned shifts',
-            'Switch to "Available Shifts" to book additional shifts',
-            'Use filters to find shifts by date, location, or status',
-            'Click "Book Shift" on available shifts you want to work',
-            'Cancel shifts at least 24 hours in advance'
+            "Go to Admin > Staff and click 'Add New Staff Member'",
+            "Enter complete personal information: name, email, phone number",
+            "Set initial password (staff can change on first login)",
+            "Assign role: Staff, Team Lead, Supervisor, or Admin",
+            "Configure availability preferences and location assignments",
+            "Enable/disable account status and notification preferences",
+            "Save and optionally send welcome email with login credentials"
           ],
           tips: [
-            'Book shifts early - they go fast!',
-            'Check requirements before booking',
-            'Set up notifications for new shifts',
-            'Contact admin if you need to cancel last-minute'
+            "Use professional email addresses for better communication",
+            "Start with basic Staff role and promote as needed",
+            "Document emergency contact information thoroughly",
+            "Consider location assignments based on staff residence"
           ]
         },
         {
-          title: 'Time Tracking',
-          icon: <Clock className="h-5 w-5 text-orange-600" />,
-          description: 'Clock in/out and track your working hours',
+          subtitle: "Managing Existing Staff",
+          icon: <Edit className="h-4 w-4 text-blue-600" />,
+          description: "Edit profiles, update permissions, and manage staff lifecycle",
           steps: [
-            'Go to "Time Tracking" from the sidebar',
-            'Click "Clock In" when you start work',
-            'Ensure you\'re at the correct location',
-            'Add notes about your work if needed',
-            'Click "Clock Out" when you finish',
-            'Review your time entries for accuracy',
-            'Submit entries for approval by deadline'
+            "View all staff in the Staff Management table with filters",
+            "Click on any staff member to view detailed profile",
+            "Edit personal information, contact details, and emergency contacts",
+            "Update role assignments and permission levels",
+            "Modify location access and availability preferences",
+            "Deactivate accounts for departing staff (preserves data)",
+            "Reset passwords when staff report access issues"
           ],
           tips: [
-            'Always clock in/out at the right location',
-            'Add detailed notes for complex tasks',
-            'Check your total hours regularly',
-            'Contact admin for time corrections'
+            "Deactivating preserves historical data better than deletion",
+            "Role changes take effect immediately upon saving",
+            "Keep staff profiles updated for accurate contact in emergencies",
+            "Use bulk actions for managing multiple staff members"
           ]
         },
         {
-          title: 'Profile Management',
-          icon: <UserCheck className="h-5 w-5 text-indigo-600" />,
-          description: 'Update your personal information and preferences',
+          subtitle: "Staff Performance & Analytics",
+          icon: <TrendingUp className="h-4 w-4 text-purple-600" />,
+          description: "Monitor staff performance, hours, and engagement metrics",
           steps: [
-            'Click your profile picture or name in the header',
-            'Select "Profile" from the dropdown menu',
-            'Update your contact information as needed',
-            'Change your password in the Security section',
-            'Set your notification preferences',
-            'Upload a profile picture (optional)',
-            'Save changes when complete'
+            "Access individual staff performance dashboards",
+            "Review total hours worked, shifts completed, and attendance rates",
+            "Check punctuality metrics and location compliance",
+            "Monitor shift booking patterns and preferred locations",
+            "View time tracking accuracy and any discrepancies",
+            "Generate individual performance reports for reviews"
           ],
           tips: [
-            'Keep contact info current for important updates',
-            'Use a strong password with mixed characters',
-            'Enable notifications for shift updates',
-            'Profile picture helps colleagues recognize you'
+            "Use performance data for scheduling and promotion decisions",
+            "Address attendance issues early with direct communication",
+            "Recognize high-performing staff to boost morale",
+            "Performance metrics help identify training needs"
+          ]
+        },
+        {
+          subtitle: "Bulk Staff Operations",
+          icon: <RefreshCw className="h-4 w-4 text-orange-600" />,
+          description: "Efficiently manage multiple staff members simultaneously",
+          steps: [
+            "Use checkboxes to select multiple staff members",
+            "Apply bulk actions: update locations, roles, or status",
+            "Send group notifications or announcements",
+            "Export staff data for external systems or backups",
+            "Import staff data from CSV files for large additions",
+            "Bulk password resets for security or onboarding"
+          ],
+          tips: [
+            "Test bulk operations on a small group first",
+            "Bulk imports should follow the provided CSV template",
+            "Verify data accuracy before confirming bulk changes",
+            "Consider timing of bulk communications to avoid disruption"
           ]
         }
       ]
     },
     {
-      id: 'admin-features',
-      title: 'Admin Features',
-      icon: <Shield className="h-6 w-6 text-red-600" />,
-      description: 'Complete administrative tools for managing staff and operations',
+      id: 'shift-management',
+      title: "📅 Advanced Shift Management",
+      icon: <Calendar className="h-5 w-5" />,
+      description: "Master bulk shift creation, scheduling, and advanced shift operations",
       content: [
         {
-          title: 'Staff Management',
-          icon: <Users className="h-5 w-5 text-blue-600" />,
-          description: 'Add, edit, and manage staff members',
+          subtitle: "Bulk Shift Generator",
+          icon: <Zap className="h-4 w-4 text-green-600" />,
+          description: "Efficiently create multiple shifts using the powerful generator tool",
           steps: [
-            'Navigate to "Staff" in the admin sidebar',
-            'Click "Add New Staff" to create accounts',
-            'Fill in staff details: name, email, phone, role',
-            'Set initial password or let system generate one',
-            'Activate/deactivate staff accounts as needed',
-            'Edit staff information by clicking the edit icon',
-            'View staff activity and performance metrics'
+            "Navigate to Admin > Shifts and click 'Generate Bulk Shifts'",
+            "Set date range for shift creation (weeks or months)",
+            "Select locations where shifts will be available",
+            "Configure shift patterns: daily, weekly, or custom schedules",
+            "Set shift duration, break times, and staff requirements",
+            "Preview generated shifts before creating (shows count and details)",
+            "Confirm creation and monitor progress in the activity log"
           ],
           tips: [
-            'Use clear naming conventions for usernames',
-            'Assign appropriate roles (Staff/Admin)',
-            'Regularly review and update staff information',
-            'Deactivate rather than delete departed staff'
+            "Preview feature prevents accidental over-creation of shifts",
+            "Consider peak business hours when setting shift times",
+            "Account for travel time between locations for staff",
+            "Generate shifts in smaller batches for complex schedules"
           ]
         },
         {
-          title: 'Location Management',
-          icon: <MapPin className="h-5 w-5 text-green-600" />,
-          description: 'Set up and manage work locations',
+          subtitle: "Individual Shift Management",
+          icon: <Edit className="h-4 w-4 text-blue-600" />,
+          description: "Create, modify, and manage individual shifts with precision",
           steps: [
-            'Go to "Locations" in the admin menu',
-            'Click "Add Location" to create new work sites',
-            'Enter location details: name, address, type',
-            'Set operating hours for each day',
-            'Assign a location manager if needed',
-            'Configure capacity and special requirements',
-            'Add facilities and notes for staff reference'
+            "Create single shifts with specific requirements and details",
+            "Edit existing shifts: time, location, requirements, or notes",
+            "Cancel shifts and automatically notify assigned staff",
+            "Reassign shifts between staff members when needed",
+            "Add special instructions or requirements to shifts",
+            "Monitor shift status: Available, Booked, In Progress, Completed"
           ],
           tips: [
-            'Include clear directions in location notes',
-            'Set realistic capacity limits',
-            'Keep operating hours updated',
-            'Use location types to organize sites'
+            "Edit shifts at least 24 hours before start time when possible",
+            "Include clear instructions for complex or new locations",
+            "Use shift notes for special equipment or task requirements",
+            "Cancellations should include reason for staff communication"
           ]
         },
         {
-          title: 'Shift Planning',
-          icon: <CalendarPlus className="h-5 w-5 text-purple-600" />,
-          description: 'Create and manage work shifts efficiently',
+          subtitle: "Shift Monitoring & Oversight",
+          icon: <Eye className="h-4 w-4 text-purple-600" />,
+          description: "Monitor active shifts and ensure smooth operations",
           steps: [
-            'Access "Shifts" from the admin sidebar',
-            'Use "Bulk Generator" for recurring shifts',
-            'Set shift parameters: location, time, duration',
-            'Choose days of the week for recurring shifts',
-            'Preview generated shifts before creating',
-            'Manually create individual shifts as needed',
-            'Assign specific staff to shifts when required'
+            "View real-time shift status across all locations",
+            "Monitor staff clock-in/out times and location compliance",
+            "Receive alerts for late arrivals or no-shows",
+            "Track shift completion rates and staff performance",
+            "Manage shift disputes or time entry corrections",
+            "Generate shift reports for payroll and analysis"
           ],
           tips: [
-            'Plan shifts well in advance',
-            'Consider staff availability and preferences',
-            'Use bulk generation for regular schedules',
-            'Leave some shifts unassigned for flexibility'
+            "Set up alerts for critical shift issues",
+            "Address no-shows immediately to maintain service levels",
+            "Use location tracking data to verify staff presence",
+            "Document any incidents or unusual circumstances"
           ]
         },
         {
-          title: 'Time & Attendance',
-          icon: <Timer className="h-5 w-5 text-orange-600" />,
-          description: 'Monitor and approve staff time entries',
+          subtitle: "Clear All Shifts Function",
+          icon: <Archive className="h-4 w-4 text-red-600" />,
+          description: "Safely remove all shifts for system resets or major schedule changes",
           steps: [
-            'Go to "Reports" to view time tracking data',
-            'Review pending time entry approvals',
-            'Check for late clock-ins or missing entries',
-            'Approve or reject time entries with notes',
-            'Export timesheet data for payroll',
-            'Monitor real-time who\'s currently working',
-            'Generate detailed time reports by period'
+            "Navigate to Admin > Shifts page",
+            "Click the red 'Clear All Shifts' button (only visible to admins)",
+            "Read all warnings about permanent data deletion carefully",
+            "Type 'DELETE ALL SHIFTS' exactly in the confirmation field",
+            "Review the count of shifts that will be deleted",
+            "Confirm deletion - this action cannot be undone",
+            "Monitor system logs for completion confirmation"
           ],
           tips: [
-            'Review and approve entries promptly',
-            'Investigate unusual time patterns',
-            'Set clear time tracking policies',
-            'Export data regularly for backup'
-          ]
-        },
-        {
-          title: 'Reports & Analytics',
-          icon: <BarChart3 className="h-5 w-5 text-blue-600" />,
-          description: 'Access detailed reports and system analytics',
-          steps: [
-            'Navigate to "Reports" in the admin menu',
-            'Choose report type: Staff, Shifts, Time, or Overview',
-            'Set date ranges for the reports',
-            'Apply filters by location, staff, or status',
-            'View charts and graphs for visual insights',
-            'Export reports as CSV or PDF files',
-            'Schedule automated report delivery (if available)'
-          ],
-          tips: [
-            'Review reports regularly for trends',
-            'Use filters to focus on specific issues',
-            'Compare periods to identify improvements',
-            'Share relevant reports with management'
-          ]
-        },
-        {
-          title: 'System Settings',
-          icon: <Settings className="h-5 w-5 text-gray-600" />,
-          description: 'Configure system-wide settings and preferences',
-          steps: [
-            'Access "Settings" from the admin sidebar',
-            'Configure notification preferences',
-            'Set time tracking policies and rules',
-            'Manage system-wide announcements',
-            'Configure email and SMS settings',
-            'Set up backup and security options',
-            'Customize system appearance and branding'
-          ],
-          tips: [
-            'Document all setting changes',
-            'Test changes in a safe environment first',
-            'Keep security settings up to date',
-            'Regular backup of system settings'
+            "This action is irreversible - use extreme caution",
+            "Consider exporting shift data before clearing for backup",
+            "Notify all staff about schedule changes in advance",
+            "Use only for major system resets or complete schedule overhauls"
           ]
         }
       ]
     },
     {
-      id: 'mobile-app',
-      title: 'Mobile App Features',
-      icon: <Wifi className="h-6 w-6 text-blue-600" />,
-      description: 'Using SunCoop as a Progressive Web App on mobile devices',
+      id: 'location-management',
+      title: "🗺️ Location Management",
+      icon: <MapPin className="h-5 w-5" />,
+      description: "Manage work locations, GPS boundaries, and geographic settings",
       content: [
         {
-          title: 'Installing the Mobile App',
-          icon: <Download className="h-5 w-5 text-green-600" />,
-          description: 'Add SunCoop to your home screen for quick access',
+          subtitle: "Adding & Configuring Locations",
+          icon: <Plus className="h-4 w-4 text-green-600" />,
+          description: "Set up new work locations with precise geographic boundaries",
           steps: [
-            'Open SunCoop in your mobile browser (Chrome, Safari, etc.)',
-            'Look for "Add to Home Screen" prompt or menu option',
-            'On iPhone: Tap Share button → Add to Home Screen',
-            'On Android: Tap menu (3 dots) → Add to Home Screen',
-            'Name the app shortcut and confirm',
-            'The app icon will appear on your home screen',
-            'Tap the icon to open SunCoop like a native app'
+            "Go to Admin > Locations and click 'Add New Location'",
+            "Enter location name, full address, and contact information",
+            "Set GPS coordinates for accurate location detection",
+            "Define geofence radius for clock-in/out boundaries",
+            "Add special instructions or safety requirements",
+            "Upload location photos or maps for staff reference",
+            "Configure location-specific settings and access hours"
           ],
           tips: [
-            'Works offline for basic functions',
-            'Receives push notifications when enabled',
-            'Updates automatically in the background',
-            'No app store download required'
+            "Test GPS coordinates by visiting the location with the app",
+            "Set geofence radius considering building size and GPS accuracy",
+            "Include parking instructions and building access codes",
+            "Regular location audits ensure accuracy and safety"
           ]
         },
         {
-          title: 'Mobile Time Tracking',
-          icon: <Clock className="h-5 w-5 text-orange-600" />,
-          description: 'Clock in/out using your mobile device',
+          subtitle: "Location Analytics & Monitoring",
+          icon: <Activity className="h-4 w-4 text-blue-600" />,
+          description: "Track location usage, popular sites, and performance metrics",
           steps: [
-            'Open the SunCoop app on your phone',
-            'Ensure location services are enabled',
-            'Navigate to Time Tracking section',
-            'Tap "Clock In" when arriving at work',
-            'Allow location access for verification',
-            'Add notes about your tasks if required',
-            'Tap "Clock Out" when leaving work',
-            'Verify your time entry is recorded correctly'
+            "View location utilization rates and staff preferences",
+            "Monitor check-in accuracy and GPS compliance",
+            "Track which locations have the most shift activity",
+            "Analyze travel patterns and staff location efficiency",
+            "Identify locations with frequent GPS or access issues",
+            "Generate location-specific reports for management"
           ],
           tips: [
-            'Enable location services for accurate tracking',
-            'Clock in/out only from authorized locations',
-            'Check network connection for sync',
-            'Contact admin if having location issues'
+            "High-traffic locations may need more frequent shifts",
+            "Poor GPS performance may indicate need for boundary adjustment",
+            "Staff feedback helps improve location data quality",
+            "Location analytics inform strategic business decisions"
+          ]
+        },
+        {
+          subtitle: "Location Maintenance & Updates",
+          icon: <Settings className="h-4 w-4 text-orange-600" />,
+          description: "Keep location data current and resolve access issues",
+          steps: [
+            "Regularly update addresses and contact information",
+            "Adjust GPS boundaries based on staff feedback",
+            "Update access instructions and security procedures",
+            "Modify operating hours and availability windows",
+            "Archive or deactivate closed locations",
+            "Merge duplicate or redundant location entries"
+          ],
+          tips: [
+            "Quarterly location reviews maintain data accuracy",
+            "Staff input is valuable for identifying location issues",
+            "Keep emergency contact information current",
+            "Document any location-specific hazards or requirements"
           ]
         }
       ]
     },
     {
-      id: 'troubleshooting',
-      title: 'Troubleshooting',
-      icon: <AlertTriangle className="h-6 w-6 text-yellow-600" />,
-      description: 'Common issues and their solutions',
+      id: 'reports-analytics',
+      title: "📊 Reports & Analytics",
+      icon: <FileText className="h-5 w-5" />,
+      description: "Generate insights and comprehensive reports for business intelligence",
       content: [
         {
-          title: 'Login Problems',
-          icon: <Key className="h-5 w-5 text-red-600" />,
-          description: 'Can\'t access your account?',
+          subtitle: "Staff Performance Reports",
+          icon: <TrendingUp className="h-4 w-4 text-green-600" />,
+          description: "Analyze individual and team performance metrics",
           steps: [
-            'Double-check your username/email and password',
-            'Ensure Caps Lock is off',
-            'Try resetting your password using "Forgot Password"',
-            'Clear your browser cache and cookies',
-            'Try a different browser or incognito mode',
-            'Check if your account has been deactivated',
-            'Contact your administrator for help'
+            "Navigate to Admin > Reports > Staff Performance",
+            "Select date range and specific staff members or teams",
+            "Choose metrics: hours worked, attendance rate, punctuality",
+            "Add location-based filters for site-specific analysis",
+            "Generate detailed reports with charts and summaries",
+            "Export reports as PDF or CSV for external sharing",
+            "Schedule automated reports for regular delivery"
           ],
           tips: [
-            'Use password manager for secure storage',
-            'Never share login credentials',
-            'Change password if you suspect compromise',
-            'Keep recovery email address current'
+            "Monthly reports help identify performance trends",
+            "Use reports for performance reviews and feedback",
+            "Compare performance across different locations",
+            "Identify top performers for recognition and development"
           ]
         },
         {
-          title: 'Time Tracking Issues',
-          icon: <Clock className="h-5 w-5 text-orange-600" />,
-          description: 'Problems with clocking in/out?',
+          subtitle: "Financial & Payroll Reports",
+          icon: <DollarSign className="h-4 w-4 text-blue-600" />,
+          description: "Generate payroll data and financial analytics",
           steps: [
-            'Check your internet connection',
-            'Ensure you\'re at the correct location',
-            'Enable location services in your browser/device',
-            'Clear browser cache and reload the page',
-            'Try using a different device or browser',
-            'Check if you\'re already clocked in elsewhere',
-            'Contact admin to manually adjust time entries'
+            "Access payroll reports with total hours and calculated pay",
+            "Filter by pay period, department, or individual staff",
+            "Review overtime hours and premium pay calculations",
+            "Generate detailed timesheets for payroll processing",
+            "Export data in formats compatible with payroll systems",
+            "Audit time entries for accuracy and policy compliance"
           ],
           tips: [
-            'Always verify successful clock in/out',
-            'Screenshot confirmation for records',
-            'Report location issues immediately',
-            'Keep backup time records manually'
+            "Run payroll reports before each pay period deadline",
+            "Verify overtime calculations against company policy",
+            "Cross-reference with time tracking data for accuracy",
+            "Keep archived reports for annual tax and audit purposes"
           ]
         },
         {
-          title: 'Notification Problems',
-          icon: <Bell className="h-5 w-5 text-blue-600" />,
-          description: 'Not receiving important notifications?',
+          subtitle: "Operational Analytics",
+          icon: <PieChart className="h-4 w-4 text-purple-600" />,
+          description: "Understand business operations through data insights",
           steps: [
-            'Check notification settings in your profile',
-            'Enable browser notifications when prompted',
-            'Check your email spam/junk folder',
-            'Verify your email address is correct',
-            'Update your phone number for SMS alerts',
-            'Check device notification settings',
-            'Try logging out and back in'
+            "Analyze shift coverage and utilization rates across locations",
+            "Monitor booking patterns and staff scheduling preferences",
+            "Track no-show rates and operational disruptions",
+            "Evaluate location performance and service delivery",
+            "Identify peak times and staffing optimization opportunities",
+            "Generate executive summaries for management reporting"
           ],
           tips: [
-            'Test notifications with a colleague',
-            'Keep contact information updated',
-            'Check notification preferences regularly',
-            'Report missing critical notifications'
+            "Operational data helps optimize scheduling efficiency",
+            "Identify patterns to improve staff satisfaction",
+            "Use insights to make data-driven business decisions",
+            "Regular reporting helps spot trends before they become issues"
+          ]
+        },
+        {
+          subtitle: "Custom Report Builder",
+          icon: <Sliders className="h-4 w-4 text-orange-600" />,
+          description: "Create specialized reports tailored to specific business needs",
+          steps: [
+            "Use the report builder to combine multiple data sources",
+            "Select from available fields: staff, shifts, locations, time tracking",
+            "Apply custom filters and date ranges",
+            "Choose visualization types: tables, charts, or graphs",
+            "Save report templates for repeated use",
+            "Share reports with specific team members or stakeholders"
+          ],
+          tips: [
+            "Start with pre-built templates and customize as needed",
+            "Complex reports may take longer to generate",
+            "Save frequently used reports as templates",
+            "Test reports with small data sets before full runs"
+          ]
+        }
+      ]
+    },
+    {
+      id: 'time-tracking-admin',
+      title: "⏰ Time Tracking Administration",
+      icon: <Clock className="h-5 w-5" />,
+      description: "Manage, approve, and audit all staff time tracking data",
+      content: [
+        {
+          subtitle: "Time Entry Review & Approval",
+          icon: <CheckCircle className="h-4 w-4 text-green-600" />,
+          description: "Review and approve staff time entries for payroll accuracy",
+          steps: [
+            "Access Admin > Time Tracking to see all pending entries",
+            "Review entries for accuracy: times, locations, and notes",
+            "Approve accurate entries with a single click or bulk approval",
+            "Flag suspicious entries for investigation or staff clarification",
+            "Reject incorrect entries with detailed explanations",
+            "Process corrections and resubmissions from staff",
+            "Monitor approval workflow and pending entry counts"
+          ],
+          tips: [
+            "Set approval deadlines to ensure timely payroll processing",
+            "Look for patterns in time discrepancies",
+            "Communicate with staff about common time entry errors",
+            "Use bulk approval for routine, accurate entries"
+          ]
+        },
+        {
+          subtitle: "Manual Time Entry Corrections",
+          icon: <Edit className="h-4 w-4 text-blue-600" />,
+          description: "Handle time corrections and resolve tracking issues",
+          steps: [
+            "Access individual staff time records for detailed review",
+            "Make corrections for technical issues or missed clock-ins",
+            "Add manual entries for work performed without proper tracking",
+            "Document reasons for all manual adjustments",
+            "Notify staff of corrections and maintain transparent communication",
+            "Audit trail shows all changes for compliance and security"
+          ],
+          tips: [
+            "Require staff explanation for all manual correction requests",
+            "Document technical issues that prevent proper tracking",
+            "Set limits on how far back corrections can be made",
+            "Regular system maintenance reduces need for manual corrections"
+          ]
+        },
+        {
+          subtitle: "Location & GPS Compliance",
+          icon: <MapPinIcon className="h-4 w-4 text-purple-600" />,
+          description: "Monitor location accuracy and investigate compliance issues",
+          steps: [
+            "Review GPS data for all clock-in/out events",
+            "Identify patterns of location non-compliance",
+            "Investigate staff working outside designated areas",
+            "Adjust location boundaries based on legitimate access needs",
+            "Generate compliance reports for management review",
+            "Address repeated violations through staff counseling"
+          ],
+          tips: [
+            "Poor GPS accuracy may indicate technical rather than compliance issues",
+            "Work with staff to understand legitimate boundary concerns",
+            "Regular boundary audits improve system accuracy",
+            "Clear policies help staff understand compliance expectations"
+          ]
+        },
+        {
+          subtitle: "Time Tracking System Settings",
+          icon: <Cog className="h-4 w-4 text-orange-600" />,
+          description: "Configure time tracking rules and system parameters",
+          steps: [
+            "Set company-wide time tracking policies and rules",
+            "Configure overtime thresholds and premium pay calculations",
+            "Define grace periods for late clock-ins and early departures",
+            "Set automatic approval rules for routine time entries",
+            "Configure location detection sensitivity and boundaries",
+            "Establish audit retention periods for compliance"
+          ],
+          tips: [
+            "Align system settings with company HR policies",
+            "Test setting changes with small groups before company-wide deployment",
+            "Document all policy changes for staff communication",
+            "Regular policy reviews ensure continued relevance"
+          ]
+        }
+      ]
+    },
+    {
+      id: 'system-settings',
+      title: "⚙️ System Settings & Configuration",
+      icon: <Settings className="h-5 w-5" />,
+      description: "Configure system-wide settings and company preferences",
+      content: [
+        {
+          subtitle: "Company Information & Branding",
+          icon: <Building2 className="h-4 w-4 text-green-600" />,
+          description: "Set up company identity and system branding",
+          steps: [
+            "Navigate to Admin > Settings > Company Information",
+            "Update company name, address, and contact information",
+            "Upload company logo for header and login screen",
+            "Set company colors and branding theme",
+            "Configure time zone and regional settings",
+            "Set default language and currency preferences",
+            "Update legal and compliance information"
+          ],
+          tips: [
+            "Consistent branding improves user experience",
+            "Ensure contact information is current for emergencies",
+            "Test branding changes on different devices",
+            "Regular information updates maintain professional appearance"
+          ]
+        },
+        {
+          subtitle: "User Permissions & Security",
+          icon: <Lock className="h-4 w-4 text-red-600" />,
+          description: "Manage security settings and access controls",
+          steps: [
+            "Configure password complexity requirements",
+            "Set session timeout and security policies",
+            "Manage admin privileges and role definitions",
+            "Configure two-factor authentication settings",
+            "Set data retention and privacy policies",
+            "Review audit logs and security events",
+            "Configure backup and data recovery procedures"
+          ],
+          tips: [
+            "Strong security policies protect sensitive staff data",
+            "Regular security reviews identify potential vulnerabilities",
+            "Balance security with user experience",
+            "Train staff on security best practices"
+          ]
+        },
+        {
+          subtitle: "Notification & Communication Settings",
+          icon: <Bell className="h-4 w-4 text-blue-600" />,
+          description: "Configure system notifications and communication preferences",
+          steps: [
+            "Set up email server configuration for system notifications",
+            "Configure notification templates for different events",
+            "Set escalation rules for critical alerts",
+            "Customize notification frequency and timing",
+            "Configure SMS settings if available",
+            "Set up automated reminders for shifts and deadlines",
+            "Test notification delivery across different channels"
+          ],
+          tips: [
+            "Test notifications regularly to ensure delivery",
+            "Customize templates to match company tone",
+            "Consider time zones when scheduling automated notifications",
+            "Provide opt-out options for non-critical notifications"
+          ]
+        },
+        {
+          subtitle: "Integration & API Settings",
+          icon: <Globe className="h-4 w-4 text-purple-600" />,
+          description: "Configure external integrations and API access",
+          steps: [
+            "Set up payroll system integration if available",
+            "Configure HR system data synchronization",
+            "Manage API keys and external service connections",
+            "Set up backup and data export procedures",
+            "Configure third-party service integrations",
+            "Monitor integration health and data flow",
+            "Manage webhook endpoints and event notifications"
+          ],
+          tips: [
+            "Test integrations thoroughly before production use",
+            "Monitor integration performance regularly",
+            "Keep API credentials secure and rotate regularly",
+            "Document integration procedures for maintenance"
+          ]
+        }
+      ]
+    },
+    {
+      id: 'troubleshooting-admin',
+      title: "🔧 Admin Troubleshooting",
+      icon: <HelpCircle className="h-5 w-5" />,
+      description: "Resolve system issues and provide technical support",
+      content: [
+        {
+          subtitle: "Common Staff Issues",
+          icon: <UserX className="h-4 w-4 text-red-600" />,
+          description: "Quickly resolve the most frequent staff-reported problems",
+          steps: [
+            "Login problems: Reset passwords, check account status, verify email",
+            "Clock-in issues: Check location boundaries, GPS settings, device permissions",
+            "Shift booking problems: Verify account status, check shift availability",
+            "Time tracking discrepancies: Review GPS data, check for technical issues",
+            "Notification problems: Verify contact info, check notification settings",
+            "App performance: Guide staff through cache clearing and updates"
+          ],
+          tips: [
+            "Keep a troubleshooting log to identify recurring issues",
+            "Screenshots from staff help diagnose problems quickly",
+            "Test fixes from the staff perspective before confirming resolution",
+            "Document solutions for future reference and staff training"
+          ]
+        },
+        {
+          subtitle: "System Performance Issues",
+          icon: <Activity className="h-4 w-4 text-orange-600" />,
+          description: "Diagnose and resolve system-wide performance problems",
+          steps: [
+            "Monitor system response times and identify bottlenecks",
+            "Check database performance and optimize queries if needed",
+            "Review server resources and scale as necessary",
+            "Analyze user load patterns and plan for peak usage",
+            "Clear system caches and restart services if required",
+            "Monitor third-party service status and integration health"
+          ],
+          tips: [
+            "Proactive monitoring prevents many performance issues",
+            "Peak usage times often coincide with shift changes",
+            "Keep system requirements documented for scaling decisions",
+            "Regular maintenance prevents most performance problems"
+          ]
+        },
+        {
+          subtitle: "Data Issues & Recovery",
+          icon: <Database className="h-4 w-4 text-blue-600" />,
+          description: "Handle data corruption, loss, or synchronization problems",
+          steps: [
+            "Identify data inconsistencies through regular audits",
+            "Use backup procedures to recover lost or corrupted data",
+            "Resolve synchronization issues between different system components",
+            "Investigate and correct duplicate or missing records",
+            "Verify data integrity after system updates or maintenance",
+            "Document data issues and implement preventive measures"
+          ],
+          tips: [
+            "Regular automated backups are essential for data recovery",
+            "Data validation rules prevent many corruption issues",
+            "Test recovery procedures regularly to ensure they work",
+            "Keep detailed logs of all data modifications"
+          ]
+        },
+        {
+          subtitle: "Integration & External Service Issues",
+          icon: <Globe className="h-4 w-4 text-purple-600" />,
+          description: "Troubleshoot problems with external services and integrations",
+          steps: [
+            "Monitor API connection status and error rates",
+            "Verify authentication credentials and permissions",
+            "Check external service status and known issues",
+            "Test data synchronization and resolve conflicts",
+            "Update integration settings and endpoints as needed",
+            "Implement fallback procedures for service outages"
+          ],
+          tips: [
+            "External service issues often require vendor communication",
+            "Keep alternative procedures ready for critical integrations",
+            "Monitor vendor status pages for known issues",
+            "Document integration dependencies and contact information"
+          ]
+        }
+      ]
+    },
+    {
+      id: 'best-practices',
+      title: "⭐ Admin Best Practices",
+      icon: <Target className="h-5 w-5" />,
+      description: "Expert tips for effective system administration and management",
+      content: [
+        {
+          subtitle: "Daily Admin Routine",
+          icon: <ClipboardList className="h-4 w-4 text-green-600" />,
+          description: "Establish efficient daily workflows for consistent system management",
+          steps: [
+            "Start each day by reviewing dashboard alerts and notifications",
+            "Check overnight time entries for approval or issues",
+            "Monitor today's shift coverage and address any gaps",
+            "Review staff activity and investigate any unusual patterns",
+            "Process pending time corrections and staff requests",
+            "Update system announcements or communications as needed",
+            "End day by reviewing completion metrics and planning tomorrow"
+          ],
+          tips: [
+            "Consistent daily routines prevent small issues from becoming major problems",
+            "Use dashboard filters to focus on priority items first",
+            "Set aside dedicated time for staff communication and support",
+            "Document recurring issues to identify system improvement opportunities"
+          ]
+        },
+        {
+          subtitle: "Staff Communication Strategies",
+          icon: <MessageSquare className="h-4 w-4 text-blue-600" />,
+          description: "Build effective communication practices with your staff",
+          steps: [
+            "Send regular updates about schedule changes and system improvements",
+            "Use multiple communication channels: in-app, email, and direct contact",
+            "Provide clear instructions and documentation for new features",
+            "Respond promptly to staff questions and technical issues",
+            "Create feedback loops to understand staff needs and concerns",
+            "Recognition programs boost morale and engagement",
+            "Maintain open communication about company policies and changes"
+          ],
+          tips: [
+            "Clear communication reduces support requests and improves satisfaction",
+            "Regular feedback helps identify training needs and system improvements",
+            "Personalized communication shows staff they are valued",
+            "Transparent policies build trust and compliance"
+          ]
+        },
+        {
+          subtitle: "Security & Compliance",
+          icon: <Shield className="h-4 w-4 text-red-600" />,
+          description: "Maintain robust security practices and regulatory compliance",
+          steps: [
+            "Regularly review and update user access permissions",
+            "Monitor system access logs for unusual activity",
+            "Ensure data backup procedures are tested and current",
+            "Keep software and security updates applied promptly",
+            "Train staff on security best practices and password policies",
+            "Conduct periodic security audits and vulnerability assessments",
+            "Maintain compliance with labor laws and data protection regulations"
+          ],
+          tips: [
+            "Security is an ongoing process, not a one-time setup",
+            "Document all security procedures for consistency",
+            "Regular training keeps security awareness high",
+            "Compliance requirements may change - stay informed"
+          ]
+        },
+        {
+          subtitle: "Performance Optimization",
+          icon: <Zap className="h-4 w-4 text-purple-600" />,
+          description: "Optimize system performance and user experience",
+          steps: [
+            "Monitor system usage patterns and optimize during peak times",
+            "Regularly clean up old data and archive unnecessary records",
+            "Optimize location boundaries based on staff feedback and GPS accuracy",
+            "Review and streamline workflows to reduce complexity",
+            "Train staff on efficient app usage to reduce support needs",
+            "Plan system updates and maintenance during low-usage periods",
+            "Continuously evaluate and improve business processes"
+          ],
+          tips: [
+            "Small optimizations compound into significant improvements over time",
+            "Staff input is valuable for identifying efficiency opportunities",
+            "Regular maintenance prevents performance degradation",
+            "User experience improvements reduce training and support costs"
           ]
         }
       ]
     }
-  ];
+  ]
 
-  // Filter sections based on search term
-  const filteredSections = sections.filter(section =>
+  const adminTips = [
+    {
+      icon: <Crown className="h-4 w-4 text-yellow-500" />,
+      text: "Admin privileges come with responsibility - always verify critical changes before applying"
+    },
+    {
+      icon: <Users className="h-4 w-4 text-blue-500" />,
+      text: "Regular staff communication prevents small issues from becoming major problems"
+    },
+    {
+      icon: <BarChart3 className="h-4 w-4 text-green-500" />,
+      text: "Use dashboard analytics to make data-driven decisions about scheduling and operations"
+    },
+    {
+      icon: <Shield className="h-4 w-4 text-red-500" />,
+      text: "Security best practices protect sensitive staff data and maintain system integrity"
+    },
+    {
+      icon: <Database className="h-4 w-4 text-purple-500" />,
+      text: "Regular data backups and system maintenance prevent costly downtime and data loss"
+    },
+    {
+      icon: <Target className="h-4 w-4 text-orange-500" />,
+      text: "Consistent admin routines and processes improve efficiency and reduce errors"
+    }
+  ]
+
+  // Filter sections based on search
+  const filteredSections = sections.filter(section => 
     section.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     section.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    section.content.some(item =>
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    section.content.some(item => 
+      item.subtitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.steps.some(step => step.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      item.tips.some(tip => tip.toLowerCase().includes(searchTerm.toLowerCase()))
+      item.steps.some(step => step.toLowerCase().includes(searchTerm.toLowerCase()))
     )
-  );
+  )
 
   const handleSectionClick = (sectionId) => {
-    setActiveSection(activeSection === sectionId ? null : sectionId);
-  };
+    setActiveSection(activeSection === sectionId ? '' : sectionId)
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile-first responsive container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-        
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
-        <div className="text-center mb-8 sm:mb-12">
+        <div className="text-center space-y-4">
           <div className="flex justify-center mb-4">
-            <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-lg">
-              <Building2 className="h-8 w-8 sm:h-12 sm:w-12 text-white" />
+            <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
+              <Crown className="h-8 w-8 sm:h-12 sm:w-12 text-white" />
             </div>
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-4 px-4">
-            SunCoop User Manual
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
+            Administrator User Manual
           </h1>
-          <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto px-4">
-            Complete guide to using the SunCoop Staff Management System
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            Comprehensive guide to mastering the SunCoop Admin Dashboard and advanced features
           </p>
+          <Badge variant="secondary" className="px-4 py-2 text-base">
+            👑 Administrator Version • v2.0
+          </Badge>
         </div>
 
         {/* Search Bar */}
-        <div className="mb-6 sm:mb-8 max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <Input
               type="text"
-              placeholder="Search for features, guides, or help topics..."
+              placeholder="Search admin features, procedures, or help topics..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 h-12 text-base rounded-xl border-2 focus:border-blue-500 focus:ring-0"
@@ -454,204 +883,184 @@ export default function UserManual() {
           </div>
         </div>
 
-        {/* Quick Navigation */}
-        {!searchTerm && (
-          <div className="mb-8 sm:mb-12">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 px-4">
-              Quick Navigation
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-              {sections.map((section) => (
-                <button
-                  key={section.id}
-                  onClick={() => handleSectionClick(section.id)}
-                  className={`p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 text-left hover:shadow-md ${
-                    activeSection === section.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex flex-col items-center text-center">
-                    <div className="mb-2">{section.icon}</div>
-                    <span className="text-xs sm:text-sm font-medium text-gray-900 leading-tight">
-                      {section.title}
-                    </span>
+        {/* Demo Credentials */}
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="text-xl flex items-center gap-2 text-blue-800">
+              <Crown className="h-5 w-5" />
+              🎯 Demo Admin Account
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="p-4 bg-white rounded-lg border border-blue-200 shadow-sm">
+                <div className="space-y-2">
+                  <p className="font-semibold text-blue-800">
+                    👑 admin
+                  </p>
+                  <p className="text-sm text-blue-700">System Administrator</p>
+                  <p className="text-xs text-blue-600">Full system access & control</p>
+                </div>
+              </div>
+              <div className="p-4 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg border border-blue-200">
+                <div className="space-y-2">
+                  <p className="font-semibold text-blue-800">Admin Features</p>
+                  <div className="text-xs text-blue-700 space-y-1">
+                    <p>• Staff Management & Analytics</p>
+                    <p>• Bulk Shift Generation</p>
+                    <p>• System Reports & Settings</p>
+                    <p>• Location & Time Management</p>
                   </div>
-                </button>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 p-3 bg-blue-100 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>💡 Admin Tip:</strong> The admin account provides full system control. Use responsibly and always backup data before major changes!
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Tips */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-500" />
+              ⭐ Essential Admin Guidelines
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3">
+              {adminTips.map((tip, index) => (
+                <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  {tip.icon}
+                  <span className="text-sm text-gray-700 leading-relaxed">{tip.text}</span>
+                </div>
               ))}
             </div>
-          </div>
-        )}
+          </CardContent>
+        </Card>
 
-        {/* Content Sections */}
-        <div className="space-y-6 sm:space-y-8">
-          {filteredSections.map((section) => (
-            <div key={section.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <button
+        {/* Manual Sections */}
+        <div className="space-y-4">
+          {filteredSections.map((section, sectionIndex) => (
+            <Card key={sectionIndex} className="overflow-hidden">
+              <CardHeader 
+                className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white cursor-pointer hover:from-blue-600 hover:to-indigo-700 transition-all"
                 onClick={() => handleSectionClick(section.id)}
-                className="w-full p-4 sm:p-6 text-left hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3 sm:space-x-4">
+                <CardTitle className="text-xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
                     {section.icon}
-                    <div>
-                      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
-                        {section.title}
-                      </h2>
-                      <p className="text-sm sm:text-base text-gray-600 mt-1">
-                        {section.description}
-                      </p>
-                    </div>
+                    {section.title}
                   </div>
-                  <ChevronRight 
-                    className={`h-5 w-5 text-gray-400 transition-transform ${
-                      activeSection === section.id ? 'rotate-90' : ''
-                    }`} 
-                  />
-                </div>
-              </button>
-
+                  {activeSection === section.id ? 
+                    <ChevronUp className="h-5 w-5" /> : 
+                    <ChevronDown className="h-5 w-5" />
+                  }
+                </CardTitle>
+                <p className="text-blue-100 text-sm">{section.description}</p>
+              </CardHeader>
+              
               {activeSection === section.id && (
-                <div className="border-t border-gray-200 p-4 sm:p-6 bg-gray-50">
-                  <div className="grid gap-6 lg:gap-8">
-                    {section.content.map((item, itemIndex) => (
-                      <Card key={itemIndex} className="shadow-sm">
-                        <CardHeader className="pb-4">
-                          <CardTitle className="flex items-center gap-3 text-base sm:text-lg">
-                            {item.icon}
-                            {item.title}
-                          </CardTitle>
-                          <p className="text-sm sm:text-base text-gray-600">
-                            {item.description}
-                          </p>
-                        </CardHeader>
-                        <CardContent className="space-y-4 sm:space-y-6">
+                <CardContent className="p-6">
+                  <div className="space-y-8">
+                    {section.content.map((subsection, subsectionIndex) => (
+                      <div key={subsectionIndex}>
+                        <div className="flex items-center gap-3 mb-4">
+                          {subsection.icon}
                           <div>
-                            <h4 className="font-semibold text-sm sm:text-base text-gray-900 mb-3">
-                              Step-by-Step Guide:
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {subsection.subtitle}
+                            </h3>
+                            <p className="text-sm text-gray-600">{subsection.description}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                              <Info className="h-4 w-4 text-blue-500" />
+                              Step-by-Step Instructions
                             </h4>
                             <ol className="space-y-2">
-                              {item.steps.map((step, stepIndex) => (
+                              {subsection.steps.map((step, stepIndex) => (
                                 <li key={stepIndex} className="flex items-start gap-3">
-                                  <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-semibold">
+                                  <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-600 text-sm font-medium rounded-full flex items-center justify-center mt-0.5">
                                     {stepIndex + 1}
                                   </span>
-                                  <span className="text-sm sm:text-base text-gray-700 leading-relaxed">
-                                    {step}
-                                  </span>
+                                  <span className="text-gray-700 leading-relaxed">{step}</span>
                                 </li>
                               ))}
                             </ol>
                           </div>
-
-                          <div>
-                            <h4 className="font-semibold text-sm sm:text-base text-gray-900 mb-3">
-                              💡 Pro Tips:
-                            </h4>
-                            <ul className="space-y-2">
-                              {item.tips.map((tip, tipIndex) => (
-                                <li key={tipIndex} className="flex items-start gap-3">
-                                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                  <span className="text-sm sm:text-base text-gray-700 leading-relaxed">
-                                    {tip}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </CardContent>
-                      </Card>
+                          
+                          {subsection.tips && (
+                            <div>
+                              <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                                Admin Pro Tips
+                              </h4>
+                              <div className="space-y-2">
+                                {subsection.tips.map((tip, tipIndex) => (
+                                  <div key={tipIndex} className="flex items-start gap-2 p-3 bg-green-50 rounded-lg">
+                                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                    <span className="text-sm text-green-800">{tip}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {subsectionIndex < section.content.length - 1 && (
+                          <Separator className="mt-6" />
+                        )}
+                      </div>
                     ))}
                   </div>
-                </div>
+                </CardContent>
               )}
-            </div>
+            </Card>
           ))}
         </div>
 
-        {/* Demo Credentials Section */}
-        <div className="mt-12 sm:mt-16 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 sm:p-8 border border-blue-200">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 text-center">
-            🚀 Try the Demo
-          </h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card className="border-blue-200 shadow-md">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-red-600">
-                  <Shield className="h-5 w-5" />
-                  Administrator Access
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <div className="space-y-2">
-                    <p className="text-sm sm:text-base"><strong>Username:</strong> admin</p>
-                    <p className="text-sm sm:text-base"><strong>Access Level:</strong> Complete system management</p>
-                    <p className="text-blue-700 font-medium text-sm sm:text-base">
-                      Explore all administrative features including staff management, reporting, and system settings
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-green-200 shadow-md">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-600">
-                  <UserCheck className="h-5 w-5" />
-                  Staff Login Options
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {[
-                    { username: 'sarah.chen', role: 'Senior staff member' },
-                    { username: 'mike.johnson', role: 'Operations specialist' },
-                    { username: 'emma.wilson', role: 'New team member' },
-                    { username: 'alex.thompson', role: 'Experienced professional' }
-                  ].map((staff, index) => (
-                    <div key={index} className="p-3 bg-green-50 rounded-lg">
-                      <p className="text-sm sm:text-base">
-                        <strong>{staff.username}</strong> - {staff.role}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Support Section */}
-        <div className="mt-8 sm:mt-12 text-center bg-white rounded-xl p-6 sm:p-8 border border-gray-200">
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
-            Need More Help?
-          </h3>
-          <p className="text-sm sm:text-base text-gray-600 mb-6 max-w-2xl mx-auto">
-            Can't find what you're looking for? Our support team is here to help you get the most out of SunCoop.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <div className="flex items-center gap-2 text-sm sm:text-base text-gray-600">
-              <Mail className="h-4 w-4" />
-              <span>support@suncoop.com</span>
+        {/* Contact Information */}
+        <Card className="bg-gradient-to-r from-indigo-50 to-blue-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2 text-blue-800">
+              <Mail className="h-5 w-5" />
+              📞 Admin Support & Resources
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-3 gap-4 text-blue-700">
+              <div className="p-4 bg-white rounded-lg border border-blue-200">
+                <h4 className="font-semibold mb-2">🛠️ Technical Support</h4>
+                <p className="text-sm">Contact system vendor or IT team for complex technical issues, integrations, or system-level problems.</p>
+              </div>
+              <div className="p-4 bg-white rounded-lg border border-blue-200">
+                <h4 className="font-semibold mb-2">📚 Documentation</h4>
+                <p className="text-sm">Access API documentation, integration guides, and advanced configuration resources in the admin panel.</p>
+              </div>
+              <div className="p-4 bg-white rounded-lg border border-blue-200">
+                <h4 className="font-semibold mb-2">👥 Community</h4>
+                <p className="text-sm">Connect with other administrators through user forums and knowledge sharing platforms.</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-sm sm:text-base text-gray-600">
-              <PhoneCall className="h-4 w-4" />
-              <span>+1 (555) 123-4567</span>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Footer */}
-        <div className="mt-8 sm:mt-12 text-center border-t border-gray-200 pt-6 sm:pt-8">
-          <p className="text-sm sm:text-base text-gray-600 mb-2">
-            SunCoop Staff Management System - Built for the modern workforce
-          </p>
-          <p className="text-xs sm:text-sm text-gray-500">
-            Progressive Web App technology ensures reliable performance across all devices
-          </p>
+        <div className="text-center text-gray-500 text-sm space-y-2">
+          <p className="font-medium">SunCoop Staff Management System - Administrator Manual v2.0</p>
+          <p>Last updated: {new Date().toLocaleDateString()}</p>
+          <p className="text-xs">This manual covers administrative features. Staff members have a separate user manual with role-appropriate content.</p>
         </div>
       </div>
     </div>
-  );
+  )
 }
+
+export default UserManual
