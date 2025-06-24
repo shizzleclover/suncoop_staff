@@ -3,7 +3,7 @@
  * Centralized API communication for SunCoop Staff Management
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://suncoooppwa-be.onrender.com/api';
 
 class ApiError extends Error {
   constructor(message, status, data) {
