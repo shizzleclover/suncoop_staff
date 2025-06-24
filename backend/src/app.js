@@ -136,6 +136,21 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Root route for Render health checks
+app.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    message: 'SunCoop Staff Management API',
+    version: require('../package.json').version,
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/api/health',
+      docs: process.env.NODE_ENV === 'development' ? '/api/docs' : undefined
+    }
+  });
+});
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
