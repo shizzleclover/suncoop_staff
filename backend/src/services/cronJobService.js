@@ -5,7 +5,6 @@
 
 const cron = require('node-cron');
 const logger = require('../utils/logger');
-const WiFiTrackingService = require('./wifiTrackingService');
 const AutoUnbookingService = require('./autoUnbookingService');
 
 class CronJobService {
@@ -21,9 +20,6 @@ class CronJobService {
     
     // Auto-unbooking check - Every 2 minutes
     this.scheduleAutoUnbookingCheck();
-    
-    // WiFi status cleanup - Daily at 2 AM
-    this.scheduleWiFiCleanup();
     
     // Health check for stuck time entries - Every 30 minutes
     this.scheduleTimeEntryHealthCheck();
@@ -63,36 +59,8 @@ class CronJobService {
     logger.info(`Scheduled job: ${jobName} - Every 2 minutes`);
   }
   
-  /**
-   * Schedule WiFi status cleanup job
-   * Runs daily at 2 AM to clean up old WiFi status records
-   */
-  scheduleWiFiCleanup() {
-    const jobName = 'wifi-cleanup';
-    
-    const job = cron.schedule('0 2 * * *', async () => {
-      try {
-        logger.info('Running WiFi status cleanup...');
-        const result = await WiFiTrackingService.cleanupOldRecords(30); // Keep 30 days
-        
-        if (result.success) {
-          logger.info(`WiFi cleanup completed: ${result.deletedCount} records deleted`);
-        } else {
-          logger.error('WiFi cleanup failed:', result.message);
-        }
-      } catch (error) {
-        logger.error('WiFi cleanup cron job error:', error);
-      }
-    }, {
-      scheduled: false,
-      timezone: process.env.TZ || 'UTC'
-    });
-    
-    this.jobs.set(jobName, job);
-    job.start();
-    
-    logger.info(`Scheduled job: ${jobName} - Daily at 2:00 AM`);
-  }
+
+
   
   /**
    * Schedule time entry health check job
@@ -156,7 +124,6 @@ class CronJobService {
   async checkStuckTimeEntries() {
     try {
       const TimeEntry = require('../models/TimeEntry');
-      const WiFiStatus = require('../models/WiFiStatus');
       const Location = require('../models/Location');
       
       // Find time entries that have been "clocked_in" for more than 24 hours
@@ -164,43 +131,26 @@ class CronJobService {
       
       const stuckEntries = await TimeEntry.find({
         status: 'clocked_in',
-        clockInTime: { $lt: oneDayAgo },
-        'wifiTracking.isWifiBasedEntry': true
+        clockInTime: { $lt: oneDayAgo }
       }).populate(['userId', 'locationId']);
       
       for (const entry of stuckEntries) {
-        // Check if user is still connected to WiFi
-        const wifiConnection = await WiFiStatus.findOne({
-          userId: entry.userId._id,
-          locationId: entry.locationId._id,
-          isConnected: true,
-          isActive: true
-        });
+        // Auto clock out stuck entries
+        logger.warn(`Auto-clocking out stuck entry: ${entry._id}`);
         
-        if (!wifiConnection) {
-          // User is not connected, auto clock out
-          logger.warn(`Auto-clocking out stuck entry: ${entry._id}`);
-          
-          await entry.clockOut();
-          entry.wifiTracking.autoClockOutReasons.push({
-            reason: 'system_error',
-            timestamp: new Date(),
-            details: 'Auto clocked out due to stuck entry (24+ hours)'
-          });
-          
-          await entry.save();
-          
-          // Create notification for user
-          const Notification = require('../models/Notification');
-          await Notification.create({
-            userId: entry.userId._id,
-            type: 'time_tracking',
-            title: 'Auto Clock Out - System Recovery',
-            message: `You have been automatically clocked out from ${entry.locationId.name} due to a system recovery process.`,
-            priority: 'normal',
-            category: 'info'
-          });
-        }
+        await entry.clockOut();
+        await entry.save();
+        
+        // Create notification for user
+        const Notification = require('../models/Notification');
+        await Notification.create({
+          userId: entry.userId._id,
+          type: 'time_tracking',
+          title: 'Auto Clock Out - System Recovery',
+          message: `You have been automatically clocked out from ${entry.locationId.name} due to a system recovery process.`,
+          priority: 'normal',
+          category: 'info'
+        });
       }
       
       if (stuckEntries.length > 0) {
@@ -327,9 +277,6 @@ class CronJobService {
       switch (jobName) {
         case 'auto-unbooking-check':
           return await AutoUnbookingService.checkShiftsForAutoUnbooking();
-        
-        case 'wifi-cleanup':
-          return await WiFiTrackingService.cleanupOldRecords(30);
         
         case 'time-entry-health-check':
           await this.checkStuckTimeEntries();

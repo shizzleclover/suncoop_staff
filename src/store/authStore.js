@@ -102,7 +102,11 @@ export const useAuthStore = create(
 
           // Verify token with server
           const response = await authApi.getCurrentUser();
-          const user = response.data.user;
+          console.log('getCurrentUser response:', response);
+          console.log('Response data:', response.data);
+          
+          const user = response.data.user || response.data;
+          console.log('Extracted user:', user);
 
           set({ 
             user, 

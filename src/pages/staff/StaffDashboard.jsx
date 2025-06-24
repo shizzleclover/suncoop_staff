@@ -38,8 +38,6 @@ import {
   isTomorrow 
 } from '../../lib/utils'
 import toast from 'react-hot-toast'
-import WiFiTrackingComponent from '../../components/WiFiTrackingComponent'
-import WiFiStatusIndicator from '../../components/WiFiStatusIndicator'
 
 // Location data helper
 const locations = [
@@ -55,7 +53,6 @@ export default function StaffDashboard() {
   const [clockedIn, setClockedIn] = useState(false)
   const [currentTimeEntry, setCurrentTimeEntry] = useState(null)
   const [elapsedTime, setElapsedTime] = useState(0)
-  const [wifiStatus, setWifiStatus] = useState(null)
   
   const [dashboardData, setDashboardData] = useState({
     upcomingShifts: [],
@@ -165,17 +162,6 @@ export default function StaffDashboard() {
     try {
       const location = locations[0] // Default to first location
       
-      // Check WiFi requirements first
-      const wifiCheck = await timeTrackingApi.checkWiFiRequirements(location._id)
-      
-      if (wifiCheck.data.wifiRequired && !wifiCheck.data.wifiConnected) {
-        toast.error(
-          `WiFi Required: Please connect to "${wifiCheck.data.requiredSSID}" network to clock in.`,
-          { duration: 5000 }
-        )
-        return
-      }
-      
       const response = await timeTrackingApi.clockIn(location._id)
       
       setClockedIn(true)
@@ -187,31 +173,12 @@ export default function StaffDashboard() {
       
     } catch (error) {
       console.error('Clock in failed:', error)
-      
-      // Handle WiFi-specific errors
-      if (error.data?.error?.code === 'WIFI_REQUIRED') {
-        toast.error(error.data.error.message, { duration: 5000 })
-      } else {
-        toast.error('Failed to clock in. Please try again.')
-      }
+      toast.error('Failed to clock in. Please try again.')
     }
   }
 
   const handleClockOut = async () => {
     try {
-      // Check WiFi requirements for clock out if current time entry has a location
-      if (currentTimeEntry?.locationId?._id) {
-        const wifiCheck = await timeTrackingApi.checkWiFiRequirements(currentTimeEntry.locationId._id)
-        
-        if (wifiCheck.data.wifiRequired && !wifiCheck.data.wifiConnected) {
-          toast.error(
-            `WiFi Required: Please connect to "${wifiCheck.data.requiredSSID}" network to clock out.`,
-            { duration: 5000 }
-          )
-          return
-        }
-      }
-      
       await timeTrackingApi.clockOut(currentTimeEntry._id)
       
       setClockedIn(false)
@@ -224,13 +191,7 @@ export default function StaffDashboard() {
       
     } catch (error) {
       console.error('Clock out failed:', error)
-      
-      // Handle WiFi-specific errors
-      if (error.data?.error?.code === 'WIFI_REQUIRED') {
-        toast.error(error.data.error.message, { duration: 5000 })
-      } else {
-        toast.error('Failed to clock out. Please try again.')
-      }
+      toast.error('Failed to clock out. Please try again.')
     }
   }
 
@@ -361,13 +322,6 @@ export default function StaffDashboard() {
         </div>
       </div>
 
-      {/* WiFi Status Indicator */}
-      <WiFiStatusIndicator 
-        locationId={locations[0]?._id} 
-        onStatusChange={setWifiStatus}
-        className="mb-4"
-      />
-
       {/* Today's Shift Alert */}
       {dashboardData.todayShift && (
         <Card className="border-l-4 border-l-blue-500 bg-blue-50">
@@ -419,9 +373,8 @@ export default function StaffDashboard() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="wifi">WiFi Tracking</TabsTrigger>
           <TabsTrigger value="actions">Quick Actions</TabsTrigger>
         </TabsList>
         
@@ -533,12 +486,7 @@ export default function StaffDashboard() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="wifi" className="mt-6">
-          <WiFiTrackingComponent 
-            user={user} 
-            locations={dashboardData.locations} 
-          />
-        </TabsContent>
+
         
         <TabsContent value="actions" className="mt-6">
           <div>

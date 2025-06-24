@@ -80,49 +80,7 @@ const timeEntrySchema = new mongoose.Schema({
     accuracy: Number,
     timestamp: Date
   },
-  wifiTracking: {
-    isWifiBasedEntry: {
-      type: Boolean,
-      default: false
-    },
-    clockInWifiSSID: {
-      type: String,
-      trim: true
-    },
-    clockOutWifiSSID: {
-      type: String,
-      trim: true
-    },
-    autoClockOutReasons: [{
-      reason: {
-        type: String,
-        enum: ['wifi_disconnected', 'manual_override', 'system_error'],
-        required: true
-      },
-      timestamp: {
-        type: Date,
-        required: true
-      },
-      details: String
-    }],
-    wifiConnectionLogs: [{
-      action: {
-        type: String,
-        enum: ['connected', 'disconnected', 'clock_in', 'clock_out'],
-        required: true
-      },
-      ssid: String,
-      timestamp: {
-        type: Date,
-        required: true
-      },
-      location: {
-        latitude: Number,
-        longitude: Number,
-        accuracy: Number
-      }
-    }]
-  },
+
   isLate: {
     type: Boolean,
     default: false

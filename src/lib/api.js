@@ -394,9 +394,7 @@ export const timeTrackingApi = {
     });
   },
   
-  checkWiFiRequirements: async (locationId) => {
-    return await apiRequest(`/time-entries/wifi-check/${locationId}`);
-  },
+
 
   clockOut: async (timeEntryId = null, location = null, notes = null) => {
     return await apiRequest('/time-entries/clock-out', {
@@ -514,65 +512,7 @@ export const healthApi = {
   },
 };
 
-// WiFi Tracking API
-export const wifiTrackingApi = {
-  reportWiFiStatus: async (data) => {
-    return await apiRequest('/wifi-tracking/report-status', {
-      method: 'POST',
-      body: data,
-    });
-  },
-  
-  getWiFiStatus: async () => {
-    return await apiRequest('/wifi-tracking/status');
-  },
-  
-  getConnectionHistory: async (days = 7) => {
-    return await apiRequest(`/wifi-tracking/history?days=${days}`);
-  },
-  
-  forceDisconnect: async (userId, locationId, reason = '') => {
-    return await apiRequest('/wifi-tracking/force-disconnect', {
-      method: 'POST',
-      body: { userId, locationId, reason },
-    });
-  },
-  
-  submitMissedShiftExplanation: async (shiftId, explanation) => {
-    return await apiRequest('/wifi-tracking/missed-shift-explanation', {
-      method: 'POST',
-      body: { shiftId, explanation },
-    });
-  },
-  
-  getUserMissedShifts: async () => {
-    return await apiRequest('/wifi-tracking/missed-shifts');
-  },
-  
-  reviewMissedShiftExplanation: async (shiftId, isApproved, adminNotes = '') => {
-    return await apiRequest(`/wifi-tracking/review-explanation/${shiftId}`, {
-      method: 'POST',
-      body: { isApproved, adminNotes },
-    });
-  },
-  
-  getPendingExplanations: async () => {
-    return await apiRequest('/wifi-tracking/pending-explanations');
-  },
-  
-  checkPendingExplanations: async () => {
-    return await apiRequest('/wifi-tracking/check-pending');
-  },
-  
-  getWiFiTrackingStats: async (locationId) => {
-    const params = locationId ? `?locationId=${locationId}` : '';
-    return await apiRequest(`/wifi-tracking/stats${params}`);
-  },
-  
-  getWiFiTrackingHealth: async () => {
-    return await apiRequest('/wifi-tracking/health');
-  }
-};
+
 
 // Export the ApiError class for use in components
 export { ApiError };
@@ -587,5 +527,4 @@ export default {
   notifications: notificationsApi,
   reports: reportsApi,
   health: healthApi,
-  wifiTracking: wifiTrackingApi,
 }; 

@@ -47,12 +47,7 @@ router.get('/currently-working', requireAdmin, timeTrackingController.getCurrent
  */
 router.get('/summary', timeTrackingController.getTimeSummary);
 
-/**
- * @route   GET /api/time-entries/wifi-check/:locationId
- * @desc    Check WiFi requirements for clock in/out
- * @access  Private
- */
-router.get('/wifi-check/:locationId', timeTrackingController.checkWiFiRequirements);
+
 
 /**
  * @route   GET /api/time-entries/:id

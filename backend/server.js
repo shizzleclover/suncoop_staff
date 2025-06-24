@@ -91,10 +91,10 @@ async function startServer() {
     await connectDB();
     logger.info('Database connected successfully');
     
-    // Initialize cron jobs for WiFi tracking and auto-unbooking
+    // Initialize cron jobs for auto-unbooking
     const cronJobService = require('./src/services/cronJobService');
     cronJobService.initializeJobs();
-    logger.info('WiFi tracking and auto-unbooking cron jobs initialized');
+    logger.info('Auto-unbooking cron jobs initialized');
     
     // Start listening
     server.listen(PORT, () => {
@@ -106,7 +106,6 @@ async function startServer() {
       if (NODE_ENV === 'development') {
         logger.info(`📋 API Documentation: http://localhost:${PORT}/api/docs`);
         logger.info(`🔍 Health Check: http://localhost:${PORT}/api/health`);
-        logger.info(`📶 WiFi Tracking Health: http://localhost:${PORT}/api/wifi-tracking/health`);
       }
     });
     
