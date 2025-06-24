@@ -175,7 +175,8 @@ export default function AdminDashboard() {
 
   return (
     <AdminProtection>
-      <div className="space-y-4 p-4 lg:space-y-8 lg:p-6 max-w-7xl mx-auto">
+      <div className="main-content">
+        <div className="space-y-4 p-4 lg:space-y-8 lg:p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="border-b border-gray-200 pb-4 lg:pb-6">
         <div className="flex items-center gap-3 lg:gap-4">
@@ -420,6 +421,7 @@ export default function AdminDashboard() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
     </AdminProtection>
   )

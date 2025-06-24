@@ -152,6 +152,10 @@ const locationSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
+    requireWifiForClockInOut: {
+      type: Boolean,
+      default: false
+    },
     wifiTrackingGracePeriod: {
       type: Number,
       default: 300, // 5 minutes in seconds

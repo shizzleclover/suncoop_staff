@@ -394,6 +394,10 @@ export const timeTrackingApi = {
     });
   },
   
+  checkWiFiRequirements: async (locationId) => {
+    return await apiRequest(`/time-entries/wifi-check/${locationId}`);
+  },
+
   clockOut: async (timeEntryId = null, location = null, notes = null) => {
     return await apiRequest('/time-entries/clock-out', {
       method: 'POST',

@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { BUSINESS_RULES } from '../../lib/utils'
 import { useToast } from '../../hooks/use-toast'
+import WiFiSettingsManager from '../../components/WiFiSettingsManager'
 
 export default function AdminSettings() {
   const { toast } = useToast()
@@ -167,7 +168,8 @@ export default function AdminSettings() {
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8 p-4 sm:p-6 max-w-7xl mx-auto">
+    <div className="main-content">
+      <div className="space-y-6 sm:space-y-8 p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-6">
         <div className="flex items-center gap-3 sm:gap-4">
@@ -473,6 +475,22 @@ export default function AdminSettings() {
         </CardContent>
       </Card>
 
+      {/* WiFi Clock In/Out Settings */}
+      <Card className="shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-t-lg">
+          <CardTitle className="flex items-center gap-3 text-lg sm:text-xl">
+            <Wifi className="h-5 w-5 text-orange-600" />
+            WiFi Clock In/Out Settings
+          </CardTitle>
+          <CardDescription>
+            Configure WiFi-based clock in/out restrictions for your locations
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6">
+          <WiFiSettingsManager />
+        </CardContent>
+      </Card>
+
       {/* Success Message */}
       {!hasChanges && !isLoading && (
         <Alert className="border-green-200 bg-green-50">
@@ -482,6 +500,7 @@ export default function AdminSettings() {
           </AlertDescription>
         </Alert>
       )}
+      </div>
     </div>
   )
 } 

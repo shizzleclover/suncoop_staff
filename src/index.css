@@ -190,6 +190,56 @@ body {
     @apply text-base;
   }
 
+  /* Add bottom padding to prevent content being hidden behind bottom nav */
+  .main-content {
+    @apply pb-20;
+    min-height: 100vh;
+  }
+
+  /* Ensure bottom nav stays fixed */
+  .bottom-nav-fixed {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 50 !important;
+    background: white !important;
+    border-top: 1px solid #e5e7eb !important;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+
+  /* Improved staff card mobile layout */
+  .staff-card {
+    @apply transition-all duration-200 hover:shadow-lg;
+  }
+
+  /* Better touch targets for mobile */
+  .mobile-button {
+    @apply min-h-[44px] px-4 py-2;
+  }
+
+  .mobile-input {
+    @apply min-h-[44px] px-3 py-2 text-base;
+  }
+
+  /* Improve card spacing on mobile */
+  .mobile-card-spacing {
+    @apply space-y-3;
+  }
+
+  /* Ensure proper scroll behavior on mobile */
+  body {
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Fix viewport issues on mobile */
+  html {
+    height: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+
   /* Improved touch targets for mobile */
   input[type="text"],
   input[type="email"],

@@ -273,15 +273,15 @@ export default function StaffManagementComponent() {
                 placeholder="Search staff by name, email, or ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-10 md:h-9"
               />
             </div>
-            <div className="relative">
+            <div className="relative min-w-[140px]">
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="pl-10 pr-8 py-2 border border-gray-300 rounded-md bg-white text-sm"
+                className="w-full pl-10 pr-8 py-2.5 md:py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -305,42 +305,42 @@ export default function StaffManagementComponent() {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {filteredStaff.map((member) => (
-                <div key={member._id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 font-semibold">
+                <div key={member._id} className="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-600 font-semibold text-sm">
                           {member.firstName[0]}{member.lastName[0]}
                         </span>
                       </div>
-                      <div>
-                        <h4 className="font-semibold text-lg">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-base md:text-lg text-gray-900 truncate">
                           {member.firstName} {member.lastName}
                         </h4>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <span>{member.email}</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm text-gray-600 mt-1">
+                          <span className="truncate">{member.email}</span>
                           {member.employeeId && (
                             <>
-                              <span>•</span>
-                              <span>ID: {member.employeeId}</span>
+                              <span className="hidden sm:inline">•</span>
+                              <span className="text-xs text-gray-500">ID: {member.employeeId}</span>
                             </>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-2">
                           <Badge className={getStatusColor(member.isActive)}>
                             {member.isActive ? 'Active' : 'Inactive'}
                           </Badge>
                           {member.department && (
-                            <Badge variant="outline">{member.department}</Badge>
+                            <Badge variant="outline" className="text-xs">{member.department}</Badge>
                           )}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm text-gray-500">
+                    <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0">
+                      <div className="text-xs text-gray-500 sm:text-sm">
                         Joined {formatDate(member.createdAt)}
                       </div>
                       <div className="relative" ref={el => dropdownRefs.current[member._id] = el}>
