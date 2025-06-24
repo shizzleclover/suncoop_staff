@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MapPin, Building2, Phone, Mail, Clock, User } from 'lucide-react'
+import { MapPin, Building2, Phone, Mail, Clock, User, Wifi } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
@@ -33,7 +33,15 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
       sunday: { open: '09:00', close: '17:00', isClosed: true }
     },
     facilities: [],
-    notes: ''
+    notes: '',
+    wifiSettings: {
+      ssid: '',
+      isTrackingEnabled: false,
+      autoClockInEnabled: true,
+      autoClockOutEnabled: true,
+      gracePeriodMinutes: 10,
+      connectionGracePeriodMinutes: 5
+    }
   })
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -237,6 +245,16 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
     }))
   }
 
+  const handleWiFiSettingsChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      wifiSettings: {
+        ...prev.wifiSettings,
+        [field]: value
+      }
+    }))
+  }
+
   const handleClose = () => {
     setFormData({
       name: '',
@@ -262,7 +280,15 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
         sunday: { open: '09:00', close: '17:00', isClosed: true }
       },
       facilities: [],
-      notes: ''
+      notes: '',
+      wifiSettings: {
+        ssid: '',
+        isTrackingEnabled: false,
+        autoClockInEnabled: true,
+        autoClockOutEnabled: true,
+        gracePeriodMinutes: 10,
+        connectionGracePeriodMinutes: 5
+      }
     })
     setErrors({})
     onClose()
@@ -509,6 +535,100 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* WiFi Tracking Settings */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 border-b pb-2">
+              <Wifi className="h-4 w-4" />
+              WiFi Tracking Settings
+            </h3>
+            
+            <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={formData.wifiSettings.isTrackingEnabled}
+                  onChange={(e) => handleWiFiSettingsChange('isTrackingEnabled', e.target.checked)}
+                  className="rounded w-4 h-4"
+                />
+                <div>
+                  <label className="text-sm font-medium">Enable WiFi Tracking</label>
+                  <p className="text-xs text-gray-600">Allow automatic clock in/out based on WiFi connection</p>
+                </div>
+              </div>
+
+              {formData.wifiSettings.isTrackingEnabled && (
+                <div className="space-y-4 ml-7">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">WiFi Network SSID</label>
+                    <Input
+                      value={formData.wifiSettings.ssid}
+                      onChange={(e) => handleWiFiSettingsChange('ssid', e.target.value)}
+                      placeholder="Office-WiFi-Network"
+                      className="text-base"
+                    />
+                    <p className="text-xs text-gray-500">The WiFi network name for this location</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.wifiSettings.autoClockInEnabled}
+                        onChange={(e) => handleWiFiSettingsChange('autoClockInEnabled', e.target.checked)}
+                        className="rounded w-4 h-4"
+                      />
+                      <div>
+                        <label className="text-sm font-medium">Auto Clock In</label>
+                        <p className="text-xs text-gray-600">Automatically clock in when connected</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.wifiSettings.autoClockOutEnabled}
+                        onChange={(e) => handleWiFiSettingsChange('autoClockOutEnabled', e.target.checked)}
+                        className="rounded w-4 h-4"
+                      />
+                      <div>
+                        <label className="text-sm font-medium">Auto Clock Out</label>
+                        <p className="text-xs text-gray-600">Automatically clock out when disconnected</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Grace Period (minutes)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="60"
+                        value={formData.wifiSettings.gracePeriodMinutes}
+                        onChange={(e) => handleWiFiSettingsChange('gracePeriodMinutes', parseInt(e.target.value) || 0)}
+                        className="text-base"
+                      />
+                      <p className="text-xs text-gray-500">Time before auto-unbooking missed shifts</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Connection Grace Period (minutes)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="30"
+                        value={formData.wifiSettings.connectionGracePeriodMinutes}
+                        onChange={(e) => handleWiFiSettingsChange('connectionGracePeriodMinutes', parseInt(e.target.value) || 0)}
+                        className="text-base"
+                      />
+                      <p className="text-xs text-gray-500">Delay before auto clock out after disconnect</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

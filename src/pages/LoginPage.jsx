@@ -229,6 +229,22 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
+        {/* Staff Registration Link */}
+        <Card className="border-green-200 bg-green-50/50">
+          <CardContent className="pt-6">
+            <Link 
+              to="/staff-register" 
+              className="flex items-center justify-center gap-3 w-full p-4 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+            >
+              <User className="h-5 w-5" />
+              <span className="font-medium">Join as Staff Member</span>
+            </Link>
+            <p className="text-center text-sm text-green-700 mt-3">
+              Request to join the team - admin approval required
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Quick Links */}
       </div>
     </div>

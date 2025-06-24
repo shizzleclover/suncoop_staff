@@ -146,6 +146,132 @@ const register = async (req, res) => {
 };
 
 /**
+ * Staff self-registration
+ * POST /api/auth/staff-register
+ */
+const staffRegister = async (req, res) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      email,
+      username,
+      password,
+      confirmPassword,
+      phone,
+      department
+    } = req.body;
+
+    // Basic validation
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'First name, last name, email, and password are required'
+        }
+      });
+    }
+
+    // Check if passwords match
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Passwords do not match'
+        }
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({
+      $or: [
+        { email: email.toLowerCase() },
+        ...(username ? [{ username: username.toLowerCase() }] : [])
+      ]
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'User with this email or username already exists'
+        }
+      });
+    }
+
+    // Create staff user (will be pending approval by default)
+    const staffUser = await User.create({
+      firstName,
+      lastName,
+      email: email.toLowerCase(),
+      username: username ? username.toLowerCase() : undefined,
+      password,
+      phone,
+      department,
+      role: 'staff',
+      isActive: true,
+      // Default approval settings for staff (set by schema defaults)
+      approvalStatus: 'pending',
+      isApproved: false
+    });
+
+    // Send notification to admins about new staff registration
+    try {
+      const admins = await User.findAdmins();
+      if (admins.length > 0) {
+        const Notification = require('../models/Notification');
+        
+        const notifications = admins.map(admin => ({
+          userId: admin._id,
+          type: 'staff_registration',
+          title: 'New Staff Registration',
+          message: `${staffUser.firstName} ${staffUser.lastName} has requested to join as a staff member.`,
+          priority: 'normal',
+          category: 'info',
+          data: {
+            staffId: staffUser._id,
+            staffName: `${staffUser.firstName} ${staffUser.lastName}`,
+            staffEmail: staffUser.email
+          }
+        }));
+
+        await Notification.insertMany(notifications);
+      }
+    } catch (notificationError) {
+      logger.error('Failed to send admin notifications:', notificationError);
+      // Don't fail the registration if notification fails
+    }
+
+    logger.info(`Staff registration request: ${staffUser.email}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful! Your account is pending approval by an administrator.',
+      data: {
+        user: {
+          id: staffUser._id,
+          email: staffUser.email,
+          firstName: staffUser.firstName,
+          lastName: staffUser.lastName,
+          displayName: staffUser.displayName,
+          role: staffUser.role,
+          approvalStatus: staffUser.approvalStatus
+        }
+      }
+    });
+
+  } catch (error) {
+    logger.error('Staff registration error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Registration failed. Please try again.'
+      }
+    });
+  }
+};
+
+/**
  * Login user
  * POST /api/auth/login
  */
@@ -188,6 +314,25 @@ const login = async (req, res) => {
           message: 'Account is deactivated. Please contact support.'
         }
       });
+    }
+
+    // Check if user can login (approval status for staff)
+    if (!user.canLogin()) {
+      if (user.approvalStatus === 'pending') {
+        return res.status(401).json({
+          success: false,
+          error: {
+            message: 'Your account is pending approval by an administrator.'
+          }
+        });
+      } else if (user.approvalStatus === 'rejected') {
+        return res.status(401).json({
+          success: false,
+          error: {
+            message: 'Your account has been rejected. Please contact support.'
+          }
+        });
+      }
     }
 
     // Generate tokens
@@ -549,6 +694,7 @@ const getSystemStatus = async (req, res) => {
 
 module.exports = {
   register,
+  staffRegister,
   login,
   refreshToken,
   forgotPassword,

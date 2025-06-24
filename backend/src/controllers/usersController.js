@@ -522,6 +522,329 @@ const getUserStats = async (req, res) => {
   }
 };
 
+/**
+ * Get pending staff approvals
+ * GET /api/users/pending-approvals
+ */
+const getPendingApprovals = async (req, res) => {
+  try {
+    logger.info('Getting pending staff approvals');
+    
+    const pendingUsers = await User.findPendingApproval();
+    
+    logger.info(`Found ${pendingUsers.length} pending approvals`);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        users: pendingUsers
+      }
+    });
+
+  } catch (error) {
+    logger.error('Get pending approvals error:', error);
+    logger.error('Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to retrieve pending approvals',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      }
+    });
+  }
+};
+
+/**
+ * Approve staff member
+ * POST /api/users/:id/approve
+ */
+const approveStaff = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the staff member
+    const staffMember = await User.findById(id);
+    if (!staffMember) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Staff member not found'
+        }
+      });
+    }
+
+    // Check if it's a staff member
+    if (staffMember.role !== 'staff') {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Only staff members can be approved'
+        }
+      });
+    }
+
+    // Check if already approved
+    if (staffMember.approvalStatus === 'approved') {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Staff member is already approved'
+        }
+      });
+    }
+
+    // Approve the staff member
+    await staffMember.approve(req.user.id);
+
+    // Create notification for the staff member
+    try {
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        userId: staffMember._id,
+        type: 'staff_approved',
+        title: 'Account Approved',
+        message: 'Your account has been approved! You can now log in to access the system.',
+        priority: 'high',
+        category: 'success'
+      });
+    } catch (notificationError) {
+      logger.error('Failed to send approval notification:', notificationError);
+    }
+
+    logger.info(`Staff approved: ${staffMember.email} by ${req.user.email}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Staff member approved successfully',
+      data: {
+        user: staffMember
+      }
+    });
+
+  } catch (error) {
+    logger.error('Approve staff error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to approve staff member'
+      }
+    });
+  }
+};
+
+/**
+ * Reject staff member
+ * POST /api/users/:id/reject
+ */
+const rejectStaff = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    if (!reason || reason.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Rejection reason is required'
+        }
+      });
+    }
+
+    // Find the staff member
+    const staffMember = await User.findById(id);
+    if (!staffMember) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'Staff member not found'
+        }
+      });
+    }
+
+    // Check if it's a staff member
+    if (staffMember.role !== 'staff') {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Only staff members can be rejected'
+        }
+      });
+    }
+
+    // Reject the staff member
+    await staffMember.reject(reason, req.user.id);
+
+    // Create notification for the staff member
+    try {
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        userId: staffMember._id,
+        type: 'staff_rejected',
+        title: 'Account Rejected',
+        message: `Your account has been rejected. Reason: ${reason}`,
+        priority: 'high',
+        category: 'error'
+      });
+    } catch (notificationError) {
+      logger.error('Failed to send rejection notification:', notificationError);
+    }
+
+    logger.info(`Staff rejected: ${staffMember.email} by ${req.user.email}, reason: ${reason}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Staff member rejected successfully',
+      data: {
+        user: staffMember
+      }
+    });
+
+  } catch (error) {
+    logger.error('Reject staff error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to reject staff member'
+      }
+    });
+  }
+};
+
+/**
+ * Permanently delete user (admin only)
+ * DELETE /api/users/:id
+ */
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { confirmText } = req.body;
+
+    // Safety check - require confirmation text
+    if (confirmText !== 'DELETE') {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Confirmation text must be "DELETE" to proceed with user deletion'
+        }
+      });
+    }
+
+    // Find the user to delete
+    const userToDelete = await User.findById(id).select('+isActive');
+    if (!userToDelete) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: 'User not found'
+        }
+      });
+    }
+
+    // Prevent deletion of super admin
+    if (userToDelete.isSuperAdmin) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Cannot delete super admin user'
+        }
+      });
+    }
+
+    // Prevent self-deletion
+    if (userToDelete._id.toString() === req.user.id) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Cannot delete your own account'
+        }
+      });
+    }
+
+    // Check if user has active shifts or time entries
+    const Shift = require('../models/Shift');
+    const TimeEntry = require('../models/TimeEntry');
+
+    const [activeShifts, pendingTimeEntries] = await Promise.all([
+      Shift.countDocuments({ 
+        assignedTo: id, 
+        status: { $in: ['AVAILABLE', 'BOOKED'] }
+      }),
+      TimeEntry.countDocuments({ 
+        userId: id, 
+        status: 'pending' 
+      })
+    ]);
+
+    if (activeShifts > 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: `Cannot delete user with ${activeShifts} active shifts. Please reassign or complete them first.`
+        }
+      });
+    }
+
+    if (pendingTimeEntries > 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: `Cannot delete user with ${pendingTimeEntries} pending time entries. Please approve or reject them first.`
+        }
+      });
+    }
+
+    // Clean up related data before deletion
+    try {
+      // Remove user from shifts they're assigned to (if any)
+      await Shift.updateMany(
+        { assignedTo: id },
+        { $unset: { assignedTo: 1 }, status: 'AVAILABLE' }
+      );
+
+      // Delete user's notifications
+      const Notification = require('../models/Notification');
+      await Notification.deleteMany({ userId: id });
+
+      // Delete user's WiFi status records
+      const WiFiStatus = require('../models/WiFiStatus');
+      await WiFiStatus.deleteMany({ userId: id });
+
+      // Note: We don't delete time entries as they are historical records
+      // We could anonymize them instead if needed
+      
+    } catch (cleanupError) {
+      logger.error('Error during user data cleanup:', cleanupError);
+      // Continue with deletion even if cleanup partially fails
+    }
+
+    // Delete the user
+    await User.findByIdAndDelete(id);
+
+    logger.info(`User permanently deleted: ${userToDelete.email} (${userToDelete._id}) by ${req.user.email}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'User deleted permanently',
+      data: {
+        deletedUser: {
+          id: userToDelete._id,
+          email: userToDelete.email,
+          name: userToDelete.displayName || `${userToDelete.firstName} ${userToDelete.lastName}`
+        }
+      }
+    });
+
+  } catch (error) {
+    logger.error('Delete user error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to delete user'
+      }
+    });
+  }
+};
+
 module.exports = {
   getUsers,
   getUserById,
@@ -530,5 +853,9 @@ module.exports = {
   updateUser,
   deactivateUser,
   reactivateUser,
-  getUserStats
+  getUserStats,
+  getPendingApprovals,
+  approveStaff,
+  rejectStaff,
+  deleteUser
 }; 
