@@ -168,7 +168,7 @@ shiftSchema.statics.findAvailable = function(fromDate = new Date()) {
     status: 'AVAILABLE',
     assignedTo: null,
     startTime: { $gte: fromDate }
-  }).populate('locationId').sort({ startTime: 1 });
+  }).sort({ startTime: 1 });
 };
 
 shiftSchema.statics.findByUser = function(userId, fromDate = null) {
@@ -176,7 +176,7 @@ shiftSchema.statics.findByUser = function(userId, fromDate = null) {
   if (fromDate) {
     query.startTime = { $gte: fromDate };
   }
-  return this.find(query).populate('locationId').sort({ startTime: 1 });
+  return this.find(query).sort({ startTime: 1 });
 };
 
 shiftSchema.statics.findByLocation = function(locationId, fromDate = new Date()) {

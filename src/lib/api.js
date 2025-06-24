@@ -19,6 +19,9 @@ const getAuthToken = () => {
   return localStorage.getItem('authToken');
 };
 
+// Exponential backoff helper
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Helper function to handle API responses
 const handleResponse = async (response) => {
   let data;
@@ -49,12 +52,12 @@ const handleResponse = async (response) => {
   return data;
 };
 
-// Generic API request function
-const apiRequest = async (endpoint, options = {}) => {
+// Generic API request function with retry logic
+const apiRequest = async (endpoint, options = {}, retryCount = 0) => {
   const url = `${API_BASE_URL}${endpoint}`;
   const token = getAuthToken();
   
-  console.log(`API Request to: ${url}`, { method: options.method || 'GET' });
+  console.log(`API Request to: ${url}`, { method: options.method || 'GET', attempt: retryCount + 1 });
   
   const config = {
     headers: {
@@ -74,6 +77,18 @@ const apiRequest = async (endpoint, options = {}) => {
     console.log('Fetch config:', { ...config, headers: { ...config.headers } });
     const response = await fetch(url, config);
     console.log(`API Response status: ${response.status}`);
+    
+    // Handle rate limiting with exponential backoff
+    if (response.status === 429 && retryCount < 3) {
+      const retryAfter = response.headers.get('Retry-After') || Math.pow(2, retryCount);
+      const delayMs = parseInt(retryAfter) * 1000;
+      
+      console.log(`Rate limited. Retrying after ${delayMs}ms (attempt ${retryCount + 1}/3)`);
+      
+      await delay(delayMs);
+      return apiRequest(endpoint, options, retryCount + 1);
+    }
+    
     return await handleResponse(response);
   } catch (error) {
     console.error('API Request error:', error);
@@ -309,6 +324,11 @@ export const timeTrackingApi = {
   getTimeEntries: async (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
     return await apiRequest(`/time-entries?${queryString}`);
+  },
+  
+  getMyTimeEntries: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return await apiRequest(`/time-entries/my-entries?${queryString}`);
   },
   
   getTimeEntryById: async (id) => {

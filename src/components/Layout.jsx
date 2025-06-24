@@ -33,6 +33,7 @@ const staffMenuItems = [
   { icon: Calendar, label: 'Shifts', href: '/staff/shifts' },
   { icon: Clock, label: 'Time Tracking', href: '/staff/time-tracking' },
   { icon: User, label: 'Profile', href: '/staff/profile' },
+  { icon: BookOpen, label: 'User Manual', href: '/manual' },
 ]
 
 const adminMenuItems = [
@@ -43,6 +44,7 @@ const adminMenuItems = [
   { icon: BarChart3, label: 'Reports', href: '/admin/reports' },
   { icon: User, label: 'Profile', href: '/admin/profile' },
   { icon: Settings, label: 'Settings', href: '/admin/settings' },
+  { icon: BookOpen, label: 'User Manual', href: '/manual' },
 ]
 
 function AppSidebar({ user, onSignOut }) {

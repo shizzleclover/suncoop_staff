@@ -72,16 +72,36 @@ app.use(cors(corsOptions));
 // Rate limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || (process.env.NODE_ENV === 'development' ? 1000 : 100), // Higher limit for development
   message: {
     error: 'Too many requests from this IP, please try again later.',
     retryAfter: Math.ceil((parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000) / 1000)
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Skip rate limiting for health checks and system status in development
+  skip: (req, res) => {
+    if (process.env.NODE_ENV === 'development') {
+      return req.path === '/api/health' || req.path === '/api/auth/system-status';
+    }
+    return false;
+  }
+});
+
+// More lenient rate limiter for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: process.env.NODE_ENV === 'development' ? 200 : 50, // 200 requests per 15 minutes in development
+  message: {
+    error: 'Too many authentication requests from this IP, please try again later.',
+    retryAfter: 900
   },
   standardHeaders: true,
   legacyHeaders: false
 });
 
 app.use('/api/', limiter);
+app.use('/api/auth', authLimiter);
 
 // Compression middleware
 app.use(compression());

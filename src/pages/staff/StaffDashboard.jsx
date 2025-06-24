@@ -96,7 +96,7 @@ export default function StaffDashboard() {
           sortBy: 'startTime', 
           sortOrder: 'asc' 
         }),
-        timeTrackingApi.getTimeEntries({ 
+        timeTrackingApi.getMyTimeEntries({ 
           limit: 5, 
           sortBy: 'date', 
           sortOrder: 'desc' 

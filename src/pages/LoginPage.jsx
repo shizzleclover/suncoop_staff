@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Mail, Lock, BookOpen, User, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, BookOpen, User, AlertCircle, Info } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function LoginPage() {
@@ -16,62 +16,90 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const { signIn, needsInitialSetup, validateSession, checkSystemStatus } = useAuthStore()
+  const { signIn, needsInitialSetup, validateSession, checkSystemStatus, user } = useAuthStore()
   const navigate = useNavigate()
+  const [isCheckingSetup, setIsCheckingSetup] = useState(false)
+  const [setupError, setSetupError] = useState('')
 
-      // Check if system needs initial setup
-    useEffect(() => {
-      const checkSetup = async () => {
-        await checkSystemStatus()
-        if (needsInitialSetup()) {
-          navigate('/admin-setup')
-          return
-        }
-
-        // Validate existing session
-        if (validateSession()) {
-          const user = useAuthStore.getState().user
-          if (user?.role === USER_ROLES.ADMIN) {
-            navigate('/admin/dashboard')
-          } else {
-            navigate('/staff/dashboard')
-          }
-        }
-      }
-      
-      checkSetup()
-    }, [needsInitialSetup, validateSession, navigate, checkSystemStatus])
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
-    
+  const checkSetup = async () => {
     try {
-      const result = await signIn(identifier, password)
+      setIsCheckingSetup(true);
+      setSetupError('');
       
-      if (result.success) {
-        const user = result.user
-        toast.success(`Welcome back, ${user.firstName}!`)
-        
-        // Navigate based on role
-        if (user.role === USER_ROLES.ADMIN) {
-          navigate('/admin/dashboard')
-        } else {
-          navigate('/staff/dashboard')
-        }
-      } else {
-        setError(result.error || 'Invalid credentials')
-        toast.error(result.error || 'Invalid credentials')
+      // Check system status (now with caching and deduplication)
+      const systemStatus = await checkSystemStatus();
+      
+      if (systemStatus.needsInitialSetup) {
+        navigate('/admin/setup');
       }
     } catch (error) {
-      const errorMessage = 'Something went wrong. Please try again.'
-      setError(errorMessage)
-      toast.error(errorMessage)
+      console.error('Setup check failed:', error);
+      setSetupError(error.message || 'Failed to connect to server. Please try again.');
     } finally {
-      setIsLoading(false)
+      setIsCheckingSetup(false);
     }
-  }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!identifier.trim() || !password.trim()) {
+      setError('Please enter both username/email and password');
+      return;
+    }
+
+    if (isLoading) return; // Prevent multiple submissions
+
+    setError('');
+    setIsLoading(true);
+
+    try {
+      await signIn(identifier, password);
+      toast.success('Login successful!');
+      
+      // Small delay to show success message
+      setTimeout(() => {
+        if (user?.role === USER_ROLES.ADMIN) {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/staff/dashboard');
+        }
+      }, 500);
+    } catch (error) {
+      console.error('Login failed:', error);
+      
+      // Handle specific error types
+      if (error.message.includes('Too many requests')) {
+        setError('Too many login attempts. Please wait a moment and try again.');
+      } else if (error.message.includes('Invalid credentials')) {
+        setError('Invalid username/email or password. Please try again.');
+      } else if (error.message.includes('backend server')) {
+        setError('Unable to connect to server. Please check your internet connection.');
+      } else {
+        setError(error.message || 'Login failed. Please try again.');
+      }
+      toast.error(error.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Check if system needs initial setup
+  useEffect(() => {
+    checkSetup();
+  }, []);
+
+  // Validate existing session
+  useEffect(() => {
+    if (validateSession()) {
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser?.role === USER_ROLES.ADMIN) {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/staff/dashboard');
+      }
+    }
+  }, [validateSession, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
@@ -94,6 +122,7 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Error Alerts */}
             {error && (
               <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
@@ -101,18 +130,35 @@ export default function LoginPage() {
               </Alert>
             )}
             
+            {setupError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{setupError}</AlertDescription>
+              </Alert>
+            )}
+            
+            {/* Setup Check Loading */}
+            {isCheckingSetup && (
+              <Alert className="mb-4 border-blue-200 bg-blue-50">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-700">
+                  Checking system status...
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="identifier">Username or Email</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <Input
                     id="identifier"
                     type="text"
                     placeholder="Enter username or email"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    className="pl-9"
+                    className="pl-10 h-11"
                     required
                   />
                 </div>
@@ -121,21 +167,21 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-9 pr-9"
+                    className="pl-10 pr-11 h-11"
                     required
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-9 w-9 p-0 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
@@ -158,7 +204,7 @@ export default function LoginPage() {
 
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="w-full h-11" 
                 disabled={isLoading}
               >
                 {isLoading ? "Signing in..." : "Sign in"}

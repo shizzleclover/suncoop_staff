@@ -1,4 +1,12 @@
 import { useState, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { 
   Settings, 
   Clock, 
@@ -8,12 +16,21 @@ import {
   Users,
   Calendar,
   Wifi,
-  Shield
+  Shield,
+  Bell,
+  Mail,
+  Smartphone,
+  RotateCcw,
+  CheckCircle,
+  Info,
+  Timer,
+  Building2
 } from 'lucide-react'
 import { BUSINESS_RULES } from '../../lib/utils'
-import toast from 'react-hot-toast'
+import { useToast } from '../../hooks/use-toast'
 
 export default function AdminSettings() {
+  const { toast } = useToast()
   const [settings, setSettings] = useState({
     // Business Rules
     maxDailyHours: BUSINESS_RULES.MAX_DAILY_HOURS || 8,
@@ -29,8 +46,6 @@ export default function AdminSettings() {
       noShow: BUSINESS_RULES.PENALTY_HOURS_NO_SHOW || 2,
       lateCancel: BUSINESS_RULES.PENALTY_HOURS_PER_CANCELLATION || 1
     },
-    
-
     
     // Notification Settings
     notifications: {
@@ -95,10 +110,17 @@ export default function AdminSettings() {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      toast.success('Settings saved successfully')
+      toast({
+        title: "Success",
+        description: "Settings saved successfully",
+      })
       setHasChanges(false)
     } catch (error) {
-      toast.error('Failed to save settings')
+      toast({
+        title: "Error",
+        description: "Failed to save settings",
+        variant: "destructive"
+      })
       console.error('Save error:', error)
     } finally {
       setIsLoading(false)
@@ -121,7 +143,6 @@ export default function AdminSettings() {
           noShow: BUSINESS_RULES.PENALTY_HOURS_NO_SHOW || 2,
           lateCancel: BUSINESS_RULES.PENALTY_HOURS_PER_CANCELLATION || 1
         },
-
         notifications: {
           shiftReminders: true,
           cancellationAlerts: true,
@@ -138,273 +159,329 @@ export default function AdminSettings() {
         }
       })
       setHasChanges(true)
-      toast.success('Settings reset to defaults')
+      toast({
+        title: "Reset Complete",
+        description: "Settings have been reset to defaults",
+      })
     }
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8 p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="border-b border-gray-200 pb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="p-4 bg-blue-100 rounded-lg">
-              <Settings className="h-8 w-8 text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">System Settings</h1>
-              <p className="text-gray-600 mt-1">Configure business rules and system preferences</p>
-            </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg">
+            <Settings className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
           </div>
-          <div className="flex space-x-3">
-            <button
-              onClick={resetToDefaults}
-              className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 transition-colors font-medium"
-            >
-              Reset to Defaults
-            </button>
-            <button
-              onClick={handleSaveSettings}
-              disabled={!hasChanges || isLoading}
-              className={`px-4 py-2 rounded-md transition-colors flex items-center font-medium ${
-                hasChanges && !isLoading
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {isLoading ? 'Saving...' : 'Save Changes'}
-            </button>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">System Settings</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+              Configure business rules and system preferences
+            </p>
           </div>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <Button
+            onClick={resetToDefaults}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Reset to Defaults
+          </Button>
+          <Button
+            onClick={handleSaveSettings}
+            disabled={!hasChanges || isLoading}
+            className="flex items-center gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {isLoading ? 'Saving...' : 'Save Changes'}
+          </Button>
         </div>
       </div>
 
+      {/* Changes Alert */}
+      {hasChanges && (
+        <Alert className="border-orange-200 bg-orange-50">
+          <Info className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800">
+            You have unsaved changes. Don't forget to save your settings.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Business Rules */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center">
-            <Clock className="w-5 h-5 text-blue-600 mr-3" />
-            <h2 className="text-lg font-semibold text-gray-900">Business Rules</h2>
-          </div>
-          <p className="text-sm text-gray-600 mt-1">Configure operational limits and policies</p>
-        </div>
-        <div className="p-6 space-y-6">
+      <Card className="shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
+          <CardTitle className="flex items-center gap-3 text-lg sm:text-xl">
+            <Clock className="h-5 w-5 text-blue-600" />
+            Business Rules
+          </CardTitle>
+          <CardDescription>
+            Configure operational limits and policies
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Max Daily Hours
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="maxDailyHours">Max Daily Hours</Label>
+              <Input
+                id="maxDailyHours"
                 type="number"
                 min="1"
                 max="24"
                 value={settings.maxDailyHours}
                 onChange={(e) => handleDirectChange('maxDailyHours', parseInt(e.target.value))}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="text-base"
               />
-              <p className="text-xs text-gray-500 mt-1">Maximum hours an employee can work per day</p>
+              <p className="text-xs text-muted-foreground">
+                Maximum hours an employee can work per day
+              </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Max Monthly Hours
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="maxMonthlyHours">Max Monthly Hours</Label>
+              <Input
+                id="maxMonthlyHours"
                 type="number"
                 min="1"
                 max="744"
                 value={settings.maxMonthlyHours}
                 onChange={(e) => handleDirectChange('maxMonthlyHours', parseInt(e.target.value))}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="text-base"
               />
-              <p className="text-xs text-gray-500 mt-1">Maximum hours an employee can work per month</p>
+              <p className="text-xs text-muted-foreground">
+                Maximum hours an employee can work per month
+              </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Max Shift Duration (hours)
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="maxShiftDuration">Max Shift Duration (hours)</Label>
+              <Input
+                id="maxShiftDuration"
                 type="number"
                 min="1"
                 max="24"
                 value={settings.maxShiftDuration}
                 onChange={(e) => handleDirectChange('maxShiftDuration', parseInt(e.target.value))}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="text-base"
               />
-              <p className="text-xs text-gray-500 mt-1">Maximum duration for a single shift</p>
+              <p className="text-xs text-muted-foreground">
+                Maximum duration for a single shift
+              </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Cancellation Notice (hours)
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="cancellationNotice">Cancellation Notice (hours)</Label>
+              <Input
+                id="cancellationNotice"
                 type="number"
                 min="1"
                 max="168"
                 value={settings.cancellationNoticeHours}
                 onChange={(e) => handleDirectChange('cancellationNoticeHours', parseInt(e.target.value))}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="text-base"
               />
-              <p className="text-xs text-gray-500 mt-1">Required notice period for shift cancellations</p>
+              <p className="text-xs text-muted-foreground">
+                Required notice period for shift cancellations
+              </p>
             </div>
           </div>
+
+          <Separator />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Working Hours Start
-              </label>
-              <select
-                value={settings.workingHours.start}
-                onChange={(e) => handleSettingChange('workingHours', 'start', parseInt(e.target.value))}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            <div className="space-y-2">
+              <Label htmlFor="workStart">Working Hours Start</Label>
+              <Select
+                value={settings.workingHours.start.toString()}
+                onValueChange={(value) => handleSettingChange('workingHours', 'start', parseInt(value))}
               >
-                {Array.from({length: 24}, (_, i) => (
-                  <option key={i} value={i}>
-                    {i.toString().padStart(2, '0')}:00
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-gray-500 mt-1">Earliest time shifts can start</p>
+                <SelectTrigger id="workStart">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({length: 24}, (_, i) => (
+                    <SelectItem key={i} value={i.toString()}>
+                      {i.toString().padStart(2, '0')}:00
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Earliest time shifts can start
+              </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Working Hours End
-              </label>
-              <select
-                value={settings.workingHours.end}
-                onChange={(e) => handleSettingChange('workingHours', 'end', parseInt(e.target.value))}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            <div className="space-y-2">
+              <Label htmlFor="workEnd">Working Hours End</Label>
+              <Select
+                value={settings.workingHours.end.toString()}
+                onValueChange={(value) => handleSettingChange('workingHours', 'end', parseInt(value))}
               >
-                {Array.from({length: 24}, (_, i) => (
-                  <option key={i} value={i}>
-                    {i.toString().padStart(2, '0')}:00
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-gray-500 mt-1">Latest time shifts can end</p>
+                <SelectTrigger id="workEnd">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({length: 24}, (_, i) => (
+                    <SelectItem key={i} value={i.toString()}>
+                      {i.toString().padStart(2, '0')}:00
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Latest time shifts can end
+              </p>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-
-
-      {/* Notifications */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center">
-            <AlertTriangle className="w-5 h-5 text-blue-600 mr-3" />
-            <h2 className="text-lg font-semibold text-gray-900">Notification Settings</h2>
-          </div>
-          <p className="text-sm text-gray-600 mt-1">Configure system notifications and alerts</p>
-        </div>
-        <div className="p-6 space-y-6">
-          {Object.entries(settings.notifications).map(([key, value]) => (
-            <div key={key} className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900 capitalize">
-                  {key.replace(/([A-Z])/g, ' $1').trim()}
-                </h3>
-                <p className="text-sm text-gray-600">
-                  {key === 'shiftReminders' && 'Send reminders before shifts start'}
-                  {key === 'cancellationAlerts' && 'Alert when shifts are cancelled'}
-                  {key === 'clockInReminders' && 'Remind employees to clock in'}
-                  {key === 'emailNotifications' && 'Send notifications via email'}
-                  {key === 'smsNotifications' && 'Send notifications via SMS'}
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
+      {/* Notification Settings */}
+      <Card className="shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-t-lg">
+          <CardTitle className="flex items-center gap-3 text-lg sm:text-xl">
+            <Bell className="h-5 w-5 text-green-600" />
+            Notification Settings
+          </CardTitle>
+          <CardDescription>
+            Configure system notifications and alerts
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 space-y-6">
+          {Object.entries(settings.notifications).map(([key, value], index) => (
+            <div key={key}>
+              <div className="flex items-center justify-between py-3">
+                <div className="flex items-center gap-3">
+                  {key === 'emailNotifications' && <Mail className="h-4 w-4 text-blue-600" />}
+                  {key === 'smsNotifications' && <Smartphone className="h-4 w-4 text-green-600" />}
+                  {key === 'shiftReminders' && <Timer className="h-4 w-4 text-orange-600" />}
+                  {key === 'cancellationAlerts' && <AlertTriangle className="h-4 w-4 text-red-600" />}
+                  {key === 'clockInReminders' && <Clock className="h-4 w-4 text-purple-600" />}
+                  
+                  <div>
+                    <h3 className="font-medium text-gray-900 text-sm sm:text-base">
+                      {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      {key === 'shiftReminders' && 'Send reminders before shifts start'}
+                      {key === 'cancellationAlerts' && 'Alert when shifts are cancelled'}
+                      {key === 'clockInReminders' && 'Remind employees to clock in'}
+                      {key === 'emailNotifications' && 'Send notifications via email'}
+                      {key === 'smsNotifications' && 'Send notifications via SMS'}
+                    </p>
+                  </div>
+                </div>
+                <Switch
                   checked={value}
-                  onChange={(e) => handleSettingChange('notifications', key, e.target.checked)}
-                  className="sr-only peer"
+                  onCheckedChange={(checked) => handleSettingChange('notifications', key, checked)}
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
+              </div>
+              {index < Object.entries(settings.notifications).length - 1 && <Separator />}
             </div>
           ))}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* App Settings */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center">
-            <Shield className="w-5 h-5 text-blue-600 mr-3" />
-            <h2 className="text-lg font-semibold text-gray-900">Application Settings</h2>
-          </div>
-          <p className="text-sm text-gray-600 mt-1">Configure application behavior and security</p>
-        </div>
-        <div className="p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-900">Maintenance Mode</h3>
-              <p className="text-sm text-gray-600">Temporarily disable the application for maintenance</p>
+      {/* Application Settings */}
+      <Card className="shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-purple-50 to-violet-50 rounded-t-lg">
+          <CardTitle className="flex items-center gap-3 text-lg sm:text-xl">
+            <Shield className="h-5 w-5 text-purple-600" />
+            Application Settings
+          </CardTitle>
+          <CardDescription>
+            Configure application behavior and security
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 space-y-6">
+          <div className="flex items-center justify-between py-3">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <div>
+                <h3 className="font-medium text-gray-900 text-sm sm:text-base">Maintenance Mode</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Temporarily disable the application for maintenance
+                </p>
+              </div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings.app.maintenanceMode}
-                onChange={(e) => handleSettingChange('app', 'maintenanceMode', e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-            </label>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-900">Allow Registration</h3>
-              <p className="text-sm text-gray-600">Allow new users to register accounts</p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings.app.allowRegistration}
-                onChange={(e) => handleSettingChange('app', 'allowRegistration', e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-900">Email Verification Required</h3>
-              <p className="text-sm text-gray-600">Require email verification for new accounts</p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings.app.requireEmailVerification}
-                onChange={(e) => handleSettingChange('app', 'requireEmailVerification', e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Session Timeout (hours)
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="24"
-              value={settings.app.sessionTimeout}
-              onChange={(e) => handleSettingChange('app', 'sessionTimeout', parseInt(e.target.value))}
-              className="w-full md:w-48 border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            <Switch
+              checked={settings.app.maintenanceMode}
+              onCheckedChange={(checked) => handleSettingChange('app', 'maintenanceMode', checked)}
             />
-            <p className="text-xs text-gray-500 mt-1">Automatically log out users after this period</p>
           </div>
-        </div>
-      </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between py-3">
+            <div className="flex items-center gap-3">
+              <Users className="h-4 w-4 text-blue-600" />
+              <div>
+                <h3 className="font-medium text-gray-900 text-sm sm:text-base">Allow Registration</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Allow new users to register accounts
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={settings.app.allowRegistration}
+              onCheckedChange={(checked) => handleSettingChange('app', 'allowRegistration', checked)}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between py-3">
+            <div className="flex items-center gap-3">
+              <Mail className="h-4 w-4 text-green-600" />
+              <div>
+                <h3 className="font-medium text-gray-900 text-sm sm:text-base">Email Verification Required</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Require email verification for new accounts
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={settings.app.requireEmailVerification}
+              onCheckedChange={(checked) => handleSettingChange('app', 'requireEmailVerification', checked)}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label htmlFor="sessionTimeout">Session Timeout (hours)</Label>
+            <div className="flex items-center gap-3">
+              <Timer className="h-4 w-4 text-orange-600" />
+              <Input
+                id="sessionTimeout"
+                type="number"
+                min="1"
+                max="24"
+                value={settings.app.sessionTimeout}
+                onChange={(e) => handleSettingChange('app', 'sessionTimeout', parseInt(e.target.value))}
+                className="w-32 text-base"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Automatically log out users after this period of inactivity
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Success Message */}
+      {!hasChanges && !isLoading && (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            All settings are up to date and saved.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   )
 } 

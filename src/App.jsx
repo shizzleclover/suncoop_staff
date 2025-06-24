@@ -95,7 +95,11 @@ function App() {
           />
           <Route 
             path="/manual" 
-            element={<UserManual />} 
+            element={
+              <ProtectedRoute allowedRoles={[USER_ROLES.STAFF, USER_ROLES.ADMIN]}>
+                <UserManual />
+              </ProtectedRoute>
+            } 
           />
           
           {/* Staff Routes */}

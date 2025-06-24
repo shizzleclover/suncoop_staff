@@ -109,7 +109,10 @@ const getAvailableShifts = async (req, res) => {
       query = query.where('startTime').lte(new Date(endDate));
     }
 
-    const shifts = await query.limit(parseInt(limit));
+    const shifts = await query
+      .populate('locationId', 'name address city type')
+      .populate('assignedTo', 'firstName lastName email employeeId')
+      .limit(parseInt(limit));
 
     res.status(200).json({
       success: true,
@@ -157,7 +160,10 @@ const getUserShifts = async (req, res) => {
       query = query.where('startTime').lte(new Date(endDate));
     }
 
-    const shifts = await query.limit(parseInt(limit));
+    const shifts = await query
+      .populate('locationId', 'name address city type')
+      .populate('assignedTo', 'firstName lastName email employeeId')
+      .limit(parseInt(limit));
 
     res.status(200).json({
       success: true,

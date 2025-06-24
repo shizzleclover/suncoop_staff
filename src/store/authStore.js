@@ -12,6 +12,11 @@ const SYSTEM_SETTINGS = {
   lastUpdated: new Date().toISOString()
 }
 
+// Request deduplication cache
+let systemStatusPromise = null;
+let lastSystemStatusCheck = 0;
+const SYSTEM_STATUS_CACHE_DURATION = 30000; // 30 seconds
+
 export const useAuthStore = create(
   persist(
     (set, get) => ({
@@ -29,20 +34,54 @@ export const useAuthStore = create(
         return state.systemStatus?.needsInitialSetup || false;
       },
 
-      // Check system status with backend
+      // Check system status with backend (with caching and deduplication)
       checkSystemStatus: async () => {
-        try {
-          const response = await authApi.getSystemStatus();
-          const systemStatus = response.data;
-          
-          set({ systemStatus });
-          return systemStatus;
-        } catch (error) {
-          console.error('Failed to check system status:', error);
-          
-          // Always throw error to ensure proper backend connection
-          throw new Error('Unable to connect to the backend server. Please check your connection and try again.');
+        const now = Date.now();
+        
+        // Use cached promise if request is already in flight
+        if (systemStatusPromise) {
+          try {
+            return await systemStatusPromise;
+          } catch (error) {
+            // If the cached promise failed, allow a new request
+            systemStatusPromise = null;
+          }
         }
+        
+        // Use cached result if recent enough
+        if (now - lastSystemStatusCheck < SYSTEM_STATUS_CACHE_DURATION) {
+          const currentStatus = get().systemStatus;
+          if (currentStatus) {
+            return currentStatus;
+          }
+        }
+        
+        // Create new request with deduplication
+        systemStatusPromise = (async () => {
+          try {
+            const response = await authApi.getSystemStatus();
+            const systemStatus = response.data;
+            
+            set({ systemStatus });
+            lastSystemStatusCheck = now;
+            systemStatusPromise = null; // Clear the promise cache
+            
+            return systemStatus;
+          } catch (error) {
+            systemStatusPromise = null; // Clear the promise cache on error
+            console.error('Failed to check system status:', error);
+            
+            // Check if it's a rate limiting error
+            if (error.status === 429) {
+              throw new Error('Too many requests. Please wait a moment and try again.');
+            }
+            
+            // Always throw error to ensure proper backend connection
+            throw new Error('Unable to connect to the backend server. Please check your connection and try again.');
+          }
+        })();
+        
+        return await systemStatusPromise;
       },
 
       // Initialize authentication state on app load
@@ -50,7 +89,7 @@ export const useAuthStore = create(
         set({ isLoading: true });
         
         try {
-          // First check system status
+          // First check system status (with caching)
           await get().checkSystemStatus();
           
           const token = localStorage.getItem('authToken');

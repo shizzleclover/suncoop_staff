@@ -237,6 +237,25 @@ const createLocation = async (req, res) => {
 
   } catch (error) {
     logger.error('Create location error:', error);
+    logger.error('Request body:', req.body);
+    logger.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    // Check if it's a validation error
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Validation failed',
+          details: validationErrors
+        }
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: {

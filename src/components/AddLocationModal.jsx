@@ -16,10 +16,10 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
     state: '',
     zipCode: '',
     country: 'US',
-          type: '',
-      capacity: 1,
-      manager: 'none',
-      contactPhone: '',
+    type: '',
+    capacity: 1,
+    manager: 'none',
+    contactPhone: '',
     contactEmail: '',
     description: '',
     timezone: 'UTC',
@@ -31,10 +31,6 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
       friday: { open: '09:00', close: '17:00', isClosed: false },
       saturday: { open: '09:00', close: '17:00', isClosed: true },
       sunday: { open: '09:00', close: '17:00', isClosed: true }
-    },
-    coordinates: {
-      latitude: '',
-      longitude: ''
     },
     facilities: [],
     notes: ''
@@ -127,15 +123,6 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
       newErrors.contactPhone = 'Please enter a valid phone number'
     }
 
-    // Validate coordinates if provided
-    if (formData.coordinates.latitude && (isNaN(formData.coordinates.latitude) || formData.coordinates.latitude < -90 || formData.coordinates.latitude > 90)) {
-      newErrors.latitude = 'Latitude must be between -90 and 90'
-    }
-
-    if (formData.coordinates.longitude && (isNaN(formData.coordinates.longitude) || formData.coordinates.longitude < -180 || formData.coordinates.longitude > 180)) {
-      newErrors.longitude = 'Longitude must be between -180 and 180'
-    }
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -153,13 +140,25 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
       // Prepare data for API
       const locationData = {
         ...formData,
-        coordinates: formData.coordinates.latitude && formData.coordinates.longitude ? {
-          latitude: parseFloat(formData.coordinates.latitude),
-          longitude: parseFloat(formData.coordinates.longitude)
-        } : undefined,
         facilities: formData.facilities.filter(f => f.trim() !== ''),
-        manager: formData.manager && formData.manager !== 'none' ? formData.manager : undefined
+        manager: formData.manager && formData.manager !== 'none' ? formData.manager : undefined,
+        // Clean up empty string values that could cause validation issues
+        contactPhone: formData.contactPhone.trim() || undefined,
+        contactEmail: formData.contactEmail.trim() || undefined,
+        description: formData.description.trim() || undefined,
+        notes: formData.notes.trim() || undefined,
+        state: formData.state.trim() || undefined,
+        zipCode: formData.zipCode.trim() || undefined
       }
+      
+      // Remove undefined values to avoid sending them to the backend
+      Object.keys(locationData).forEach(key => {
+        if (locationData[key] === undefined) {
+          delete locationData[key]
+        }
+      })
+      
+      console.log('Sending location data:', locationData) // Debug log
       
       const response = await locationsApi.createLocation(locationData)
       
@@ -262,10 +261,6 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
         saturday: { open: '09:00', close: '17:00', isClosed: true },
         sunday: { open: '09:00', close: '17:00', isClosed: true }
       },
-      coordinates: {
-        latitude: '',
-        longitude: ''
-      },
       facilities: [],
       notes: ''
     })
@@ -275,13 +270,13 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-3 sm:p-6 mx-2 sm:mx-auto">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <MapPin className="h-5 w-5" />
             Add New Location
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm">
             Add a new work location to your organization
           </DialogDescription>
         </DialogHeader>
@@ -289,12 +284,12 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 border-b pb-2">
               <Building2 className="h-4 w-4" />
               Basic Information
             </h3>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">
                   Location Name <span className="text-red-500">*</span>
@@ -303,7 +298,7 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   placeholder="e.g., Downtown Office"
-                  className={errors.name ? 'border-red-500' : ''}
+                  className={`text-base ${errors.name ? 'border-red-500' : ''}`}
                 />
                 {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
               </div>
@@ -313,7 +308,7 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                   Location Type <span className="text-red-500">*</span>
                 </label>
                 <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
-                  <SelectTrigger className={errors.type ? 'border-red-500' : ''}>
+                  <SelectTrigger className={`text-base ${errors.type ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -334,13 +329,14 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 placeholder="Brief description of the location"
+                className="text-base"
               />
             </div>
           </div>
 
           {/* Address Information */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 border-b pb-2">
               <MapPin className="h-4 w-4" />
               Address Information
             </h3>
@@ -353,12 +349,12 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                 value={formData.address}
                 onChange={(e) => handleInputChange('address', e.target.value)}
                 placeholder="123 Main Street"
-                className={errors.address ? 'border-red-500' : ''}
+                className={`text-base ${errors.address ? 'border-red-500' : ''}`}
               />
               {errors.address && <p className="text-xs text-red-500">{errors.address}</p>}
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">
                   City <span className="text-red-500">*</span>
@@ -367,7 +363,7 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                   value={formData.city}
                   onChange={(e) => handleInputChange('city', e.target.value)}
                   placeholder="City"
-                  className={errors.city ? 'border-red-500' : ''}
+                  className={`text-base ${errors.city ? 'border-red-500' : ''}`}
                 />
                 {errors.city && <p className="text-xs text-red-500">{errors.city}</p>}
               </div>
@@ -378,6 +374,7 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                   value={formData.state}
                   onChange={(e) => handleInputChange('state', e.target.value)}
                   placeholder="State"
+                  className="text-base"
                 />
               </div>
               
@@ -387,48 +384,20 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                   value={formData.zipCode}
                   onChange={(e) => handleInputChange('zipCode', e.target.value)}
                   placeholder="12345"
+                  className="text-base"
                 />
-              </div>
-            </div>
-
-            {/* Coordinates */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Latitude (Optional)</label>
-                <Input
-                  type="number"
-                  step="any"
-                  value={formData.coordinates.latitude}
-                  onChange={(e) => handleInputChange('coordinates.latitude', e.target.value)}
-                  placeholder="40.7128"
-                  className={errors.latitude ? 'border-red-500' : ''}
-                />
-                {errors.latitude && <p className="text-xs text-red-500">{errors.latitude}</p>}
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Longitude (Optional)</label>
-                <Input
-                  type="number"
-                  step="any"
-                  value={formData.coordinates.longitude}
-                  onChange={(e) => handleInputChange('coordinates.longitude', e.target.value)}
-                  placeholder="-74.0060"
-                  className={errors.longitude ? 'border-red-500' : ''}
-                />
-                {errors.longitude && <p className="text-xs text-red-500">{errors.longitude}</p>}
               </div>
             </div>
           </div>
 
           {/* Management & Contact */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 border-b pb-2">
               <User className="h-4 w-4" />
               Management & Contact
             </h3>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Location Manager (Optional)</label>
                 <Select 
@@ -436,14 +405,14 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                   onValueChange={(value) => handleInputChange('manager', value)}
                   disabled={loadingUsers}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="text-base">
                     <SelectValue placeholder={loadingUsers ? "Loading users..." : "Select a manager"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No Manager</SelectItem>
                     {users.map((user) => (
                       <SelectItem key={user._id} value={user._id}>
-                        {user.firstName} {user.lastName} ({user.email})
+                        {user.firstName} {user.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -457,33 +426,39 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                   min="1"
                   value={formData.capacity}
                   onChange={(e) => handleInputChange('capacity', parseInt(e.target.value) || 1)}
-                  className={errors.capacity ? 'border-red-500' : ''}
+                  className={`text-base ${errors.capacity ? 'border-red-500' : ''}`}
                 />
                 {errors.capacity && <p className="text-xs text-red-500">{errors.capacity}</p>}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Contact Phone</label>
+                <label className="text-sm font-medium flex items-center gap-1">
+                  <Phone className="h-3 w-3" />
+                  Contact Phone
+                </label>
                 <Input
                   type="tel"
                   value={formData.contactPhone}
                   onChange={(e) => handleInputChange('contactPhone', e.target.value)}
                   placeholder="+1 (555) 123-4567"
-                  className={errors.contactPhone ? 'border-red-500' : ''}
+                  className={`text-base ${errors.contactPhone ? 'border-red-500' : ''}`}
                 />
                 {errors.contactPhone && <p className="text-xs text-red-500">{errors.contactPhone}</p>}
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium">Contact Email</label>
+                <label className="text-sm font-medium flex items-center gap-1">
+                  <Mail className="h-3 w-3" />
+                  Contact Email
+                </label>
                 <Input
                   type="email"
                   value={formData.contactEmail}
                   onChange={(e) => handleInputChange('contactEmail', e.target.value)}
                   placeholder="location@company.com"
-                  className={errors.contactEmail ? 'border-red-500' : ''}
+                  className={`text-base ${errors.contactEmail ? 'border-red-500' : ''}`}
                 />
                 {errors.contactEmail && <p className="text-xs text-red-500">{errors.contactEmail}</p>}
               </div>
@@ -492,44 +467,46 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
 
           {/* Operating Hours */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 border-b pb-2">
               <Clock className="h-4 w-4" />
               Operating Hours
             </h3>
             
             <div className="space-y-3">
               {daysOfWeek.map((day) => (
-                <div key={day.key} className="flex items-center gap-4">
-                  <div className="w-20 text-sm font-medium">{day.label}</div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={!formData.operatingHours[day.key].isClosed}
-                      onChange={(e) => handleOperatingHoursChange(day.key, 'isClosed', !e.target.checked)}
-                      className="rounded"
-                    />
-                    <span className="text-sm">Open</span>
+                <div key={day.key} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-full sm:w-20 text-sm font-medium">{day.label}</div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={!formData.operatingHours[day.key].isClosed}
+                        onChange={(e) => handleOperatingHoursChange(day.key, 'isClosed', !e.target.checked)}
+                        className="rounded w-4 h-4"
+                      />
+                      <span className="text-sm">Open</span>
+                    </div>
+                    {!formData.operatingHours[day.key].isClosed && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Input
+                          type="time"
+                          value={formData.operatingHours[day.key].open}
+                          onChange={(e) => handleOperatingHoursChange(day.key, 'open', e.target.value)}
+                          className="w-28 text-sm"
+                        />
+                        <span className="text-sm">to</span>
+                        <Input
+                          type="time"
+                          value={formData.operatingHours[day.key].close}
+                          onChange={(e) => handleOperatingHoursChange(day.key, 'close', e.target.value)}
+                          className="w-28 text-sm"
+                        />
+                      </div>
+                    )}
+                    {formData.operatingHours[day.key].isClosed && (
+                      <span className="text-sm text-gray-500">Closed</span>
+                    )}
                   </div>
-                  {!formData.operatingHours[day.key].isClosed && (
-                    <>
-                      <Input
-                        type="time"
-                        value={formData.operatingHours[day.key].open}
-                        onChange={(e) => handleOperatingHoursChange(day.key, 'open', e.target.value)}
-                        className="w-32"
-                      />
-                      <span className="text-sm">to</span>
-                      <Input
-                        type="time"
-                        value={formData.operatingHours[day.key].close}
-                        onChange={(e) => handleOperatingHoursChange(day.key, 'close', e.target.value)}
-                        className="w-32"
-                      />
-                    </>
-                  )}
-                  {formData.operatingHours[day.key].isClosed && (
-                    <span className="text-sm text-gray-500">Closed</span>
-                  )}
                 </div>
               ))}
             </div>
@@ -537,13 +514,13 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
 
           {/* Additional Settings */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900">Additional Settings</h3>
+            <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">Additional Settings</h3>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Timezone</label>
                 <Select value={formData.timezone} onValueChange={(value) => handleInputChange('timezone', value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-base">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -562,6 +539,7 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                   value={formData.facilities.join(', ')}
                   onChange={(e) => handleFacilitiesChange(e.target.value)}
                   placeholder="WiFi, Parking, Cafeteria (comma separated)"
+                  className="text-base"
                 />
               </div>
             </div>
@@ -572,16 +550,26 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                 value={formData.notes}
                 onChange={(e) => handleInputChange('notes', e.target.value)}
                 placeholder="Additional notes about this location..."
+                className="text-base"
               />
             </div>
           </div>
         </form>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+        <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+          <Button 
+            variant="outline" 
+            onClick={handleClose} 
+            disabled={isSubmitting}
+            className="w-full sm:w-auto text-base py-3"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting}
+            className="w-full sm:w-auto text-base py-3"
+          >
             {isSubmitting ? 'Adding...' : 'Add Location'}
           </Button>
         </DialogFooter>

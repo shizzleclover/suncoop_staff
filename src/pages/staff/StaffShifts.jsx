@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../../store'
 import { shiftsApi } from '../../lib/api'
 import { useToast } from '../../hooks/use-toast'
-import { formatTime, formatDate, SHIFT_STATUS } from '../../lib/utils'
+import { formatTime, formatDate, isToday, isTomorrow, SHIFT_STATUS } from '../../lib/utils'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -133,7 +133,7 @@ export default function StaffShifts() {
 
   const handleBookShift = async (shiftId) => {
     try {
-      await shiftsApi.assignShift(shiftId, { userId: user.id })
+      await shiftsApi.assignShift(shiftId, user.id)
       
       toast({
         title: "Success",

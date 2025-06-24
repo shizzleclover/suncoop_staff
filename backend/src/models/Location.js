@@ -66,7 +66,7 @@ const locationSchema = new mongoose.Schema({
     type: String,
     trim: true,
     match: [
-      /^\+?[1-9]\d{1,14}$/,
+      /^[\+]?[\d\s\-\(\)\.]+$/,
       'Please provide a valid phone number'
     ]
   },

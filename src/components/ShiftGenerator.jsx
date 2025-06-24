@@ -47,7 +47,7 @@ export default function ShiftGenerator({ isOpen, onClose, locations, onShiftsGen
     
     // Loop through each day in the date range
     for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
-      const dayOfWeek = day.toLocaleDateString('en-US', { weekday: 'lowercase' })
+      const dayOfWeek = day.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
       
       // Skip days that are not selected
       if (!daysOfWeek[dayOfWeek]) continue
