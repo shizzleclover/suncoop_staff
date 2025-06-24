@@ -9,7 +9,9 @@ import {
   UserCheck, 
   X, 
   Trash2,
-  Plus 
+  Plus,
+  Clock,
+  Eye
 } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -27,6 +29,7 @@ import { usersApi } from '../lib/api'
 import { LoadingSpinner } from './LoadingSpinner'
 import AddUserModal from './AddUserModal'
 import StaffEditModal from './StaffEditModal'
+import StaffTimeTrackingModal from './StaffTimeTrackingModal'
 
 export default function StaffManagementComponent() {
   const { toast } = useToast()
@@ -40,6 +43,8 @@ export default function StaffManagementComponent() {
   const [showAddUserModal, setShowAddUserModal] = useState(false)
   const [editingStaff, setEditingStaff] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedStaffForTimeTracking, setSelectedStaffForTimeTracking] = useState(null)
+  const [showTimeTrackingModal, setShowTimeTrackingModal] = useState(false)
   const dropdownRefs = useRef({})
 
   // Close dropdowns when clicking outside
@@ -61,25 +66,23 @@ export default function StaffManagementComponent() {
   const loadStaff = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await usersApi.getUsers({ 
-        role: 'staff',
-        limit: 100,
-        approvalStatus: 'approved'
-      })
+      const response = await usersApi.getAllUsers({ role: 'staff', includeInactive: true })
       
-      if (response.success && response.data.users) {
-        setStaff(response.data.users)
+      if (response && response.success && response.data) {
+        const staffData = response.data.users || []
+        setStaff(Array.isArray(staffData) ? staffData : [])
       } else {
+        console.warn('Invalid response structure:', response)
         setStaff([])
       }
     } catch (error) {
       console.error('Error loading staff:', error)
+      setStaff([])
       toast({
         title: "Error",
         description: "Failed to load staff members",
         variant: "destructive"
       })
-      setStaff([])
     } finally {
       setLoading(false)
     }
@@ -100,36 +103,25 @@ export default function StaffManagementComponent() {
     const staffMember = staff.find(s => s._id === staffId)
     if (!staffMember) return
 
+    setProcessingId(staffId)
     try {
-      setProcessingId(staffId)
+      const action = staffMember.isActive ? 'deactivate' : 'reactivate'
+      const response = await usersApi.updateUserStatus(staffId, !staffMember.isActive)
       
-      const response = staffMember.isActive 
-        ? await usersApi.deactivateUser(staffId)
-        : await usersApi.reactivateUser(staffId)
-      
-      if (response.success) {
+      if (response && response.success) {
+        await loadStaff()
         toast({
           title: "Success",
-          description: `Staff member ${staffMember.isActive ? 'deactivated' : 'reactivated'} successfully`,
+          description: `Staff member ${action}d successfully`
         })
-        
-        setStaff(prev => prev.map(s => 
-          s._id === staffId 
-            ? { ...s, isActive: !s.isActive }
-            : s
-        ))
       } else {
-        toast({
-          title: "Error",
-          description: response.message || "Failed to update staff status",
-          variant: "destructive"
-        })
+        throw new Error(response?.error?.message || `Failed to ${action} staff member`)
       }
     } catch (error) {
-      console.error('Error toggling staff status:', error)
+      console.error(`Error ${staffMember.isActive ? 'deactivating' : 'reactivating'} staff:`, error)
       toast({
         title: "Error",
-        description: "Failed to update staff member status",
+        description: error.message || `Failed to ${staffMember.isActive ? 'deactivate' : 'reactivate'} staff member`,
         variant: "destructive"
       })
     } finally {
@@ -141,38 +133,32 @@ export default function StaffManagementComponent() {
   const handleDeleteStaff = async (staffId) => {
     if (confirmDialog.confirmText !== 'DELETE') {
       toast({
-        title: "Error",
+        title: "Invalid confirmation",
         description: "Please type 'DELETE' to confirm",
         variant: "destructive"
       })
       return
     }
 
+    setProcessingId(staffId)
     try {
-      setProcessingId(staffId)
+      const response = await usersApi.deleteUser(staffId)
       
-      const response = await usersApi.deleteUser(staffId, confirmDialog.confirmText)
-      
-      if (response.success) {
+      if (response && response.success) {
+        await loadStaff()
+        setConfirmDialog({ open: false, type: '', staffId: null, confirmText: '' })
         toast({
           title: "Success",
-          description: "Staff member deleted permanently",
+          description: "Staff member deleted successfully"
         })
-        
-        setStaff(prev => prev.filter(s => s._id !== staffId))
-        setConfirmDialog({ open: false, type: '', staffId: null, confirmText: '' })
       } else {
-        toast({
-          title: "Error",
-          description: response.message || "Failed to delete staff member",
-          variant: "destructive"
-        })
+        throw new Error(response?.error?.message || 'Failed to delete staff member')
       }
     } catch (error) {
       console.error('Error deleting staff:', error)
       toast({
         title: "Error",
-        description: "Failed to delete staff member",
+        description: error.message || "Failed to delete staff member",
         variant: "destructive"
       })
     } finally {
@@ -181,7 +167,7 @@ export default function StaffManagementComponent() {
   }
 
   const handleUserAdded = (newUser) => {
-    setStaff(prev => [...prev, newUser])
+    loadStaff()
     setShowAddUserModal(false)
   }
 
@@ -192,19 +178,29 @@ export default function StaffManagementComponent() {
   }
 
   const handleStaffUpdated = (updatedStaff) => {
-    setStaff(prev => prev.map(s => 
-      s._id === updatedStaff._id ? updatedStaff : s
+    setStaff(prev => prev.map(member => 
+      member._id === updatedStaff._id ? updatedStaff : member
     ))
     setShowEditModal(false)
     setEditingStaff(null)
   }
 
+  const handleViewTimeTracking = (staffMember) => {
+    setSelectedStaffForTimeTracking(staffMember)
+    setShowTimeTrackingModal(true)
+    setOpenDropdowns(prev => ({ ...prev, [staffMember._id]: false }))
+  }
+
   const getFilteredStaff = () => {
+    if (!Array.isArray(staff)) return []
+    
     return staff.filter(member => {
-      const matchesSearch = searchTerm === '' || 
-        `${member.firstName} ${member.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (member.employeeId && member.employeeId.toLowerCase().includes(searchTerm.toLowerCase()))
+      const searchLower = searchTerm.toLowerCase()
+      const matchesSearch = !searchTerm || 
+        member.firstName?.toLowerCase().includes(searchLower) ||
+        member.lastName?.toLowerCase().includes(searchLower) ||
+        member.email?.toLowerCase().includes(searchLower) ||
+        member.employeeId?.toLowerCase().includes(searchLower)
 
       const matchesStatus = statusFilter === 'all' || 
         (statusFilter === 'active' && member.isActive) ||
@@ -309,14 +305,17 @@ export default function StaffManagementComponent() {
               {filteredStaff.map((member) => (
                 <div key={member._id} className="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div 
+                      className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                      onClick={() => handleViewTimeTracking(member)}
+                    >
                       <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                         <span className="text-blue-600 font-semibold text-sm">
                           {member.firstName[0]}{member.lastName[0]}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-base md:text-lg text-gray-900 truncate">
+                        <h4 className="font-semibold text-base md:text-lg text-gray-900 truncate hover:text-blue-600 transition-colors">
                           {member.firstName} {member.lastName}
                         </h4>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm text-gray-600 mt-1">
@@ -336,6 +335,9 @@ export default function StaffManagementComponent() {
                             <Badge variant="outline" className="text-xs">{member.department}</Badge>
                           )}
                         </div>
+                        <p className="text-xs text-blue-600 mt-1 opacity-80">
+                          Click to view time tracking details
+                        </p>
                       </div>
                     </div>
 
@@ -343,62 +345,83 @@ export default function StaffManagementComponent() {
                       <div className="text-xs text-gray-500 sm:text-sm">
                         Joined {formatDate(member.createdAt)}
                       </div>
-                      <div className="relative" ref={el => dropdownRefs.current[member._id] = el}>
-                        <DropdownMenu 
-                          open={openDropdowns[member._id]} 
-                          onOpenChange={(open) => setOpenDropdowns(prev => ({ ...prev, [member._id]: open }))}
+                      <div className="flex items-center gap-2">
+                        {/* Quick Time Tracking Button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleViewTimeTracking(member)
+                          }}
+                          className="flex items-center gap-1"
                         >
-                          <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                toggleDropdown(member._id)
-                              }}
-                              disabled={processingId === member._id}
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => handleEditStaff(member)}>
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit Profile
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleToggleStatus(member._id)}
-                              className={member.isActive ? "text-orange-600" : "text-green-600"}
-                            >
-                              {member.isActive ? (
-                                <>
-                                  <UserMinus className="h-4 w-4 mr-2" />
-                                  Deactivate
-                                </>
-                              ) : (
-                                <>
-                                  <UserCheck className="h-4 w-4 mr-2" />
-                                  Reactivate
-                                </>
-                              )}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => {
-                                setConfirmDialog({
-                                  open: true,
-                                  type: 'delete',
-                                  staffId: member._id,
-                                  confirmText: ''
-                                })
-                                setOpenDropdowns(prev => ({ ...prev, [member._id]: false }))
-                              }}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Permanently Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                          <Clock className="h-3 w-3" />
+                          <span className="hidden sm:inline">Time</span>
+                        </Button>
+                        
+                        {/* More Actions Dropdown */}
+                        <div className="relative" ref={el => dropdownRefs.current[member._id] = el}>
+                          <DropdownMenu 
+                            open={openDropdowns[member._id]} 
+                            onOpenChange={(open) => setOpenDropdowns(prev => ({ ...prev, [member._id]: open }))}
+                          >
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  toggleDropdown(member._id)
+                                }}
+                                disabled={processingId === member._id}
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onClick={() => handleViewTimeTracking(member)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Time Tracking
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEditStaff(member)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit Profile
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleToggleStatus(member._id)}
+                                className={member.isActive ? "text-orange-600" : "text-green-600"}
+                              >
+                                {member.isActive ? (
+                                  <>
+                                    <UserMinus className="h-4 w-4 mr-2" />
+                                    Deactivate
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserCheck className="h-4 w-4 mr-2" />
+                                    Reactivate
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  setConfirmDialog({
+                                    open: true,
+                                    type: 'delete',
+                                    staffId: member._id,
+                                    confirmText: ''
+                                  })
+                                  setOpenDropdowns(prev => ({ ...prev, [member._id]: false }))
+                                }}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Permanently Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -455,7 +478,6 @@ export default function StaffManagementComponent() {
               onClick={() => setConfirmDialog({ open: false, type: '', staffId: null, confirmText: '' })}
               disabled={processingId}
             >
-              <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
             <Button 
@@ -464,18 +486,20 @@ export default function StaffManagementComponent() {
               disabled={processingId || confirmDialog.confirmText !== 'DELETE'}
             >
               {processingId ? (
-                <LoadingSpinner size="sm" className="mr-2" />
+                <>
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  Deleting...
+                </>
               ) : (
-                <Trash2 className="h-4 w-4 mr-2" />
+                'Delete Permanently'
               )}
-              Delete Permanently
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Add User Modal */}
-      <AddUserModal
+      <AddUserModal 
         isOpen={showAddUserModal}
         onClose={() => setShowAddUserModal(false)}
         onUserAdded={handleUserAdded}
@@ -490,6 +514,16 @@ export default function StaffManagementComponent() {
         }}
         staffMember={editingStaff}
         onStaffUpdated={handleStaffUpdated}
+      />
+
+      {/* Time Tracking Modal */}
+      <StaffTimeTrackingModal
+        isOpen={showTimeTrackingModal}
+        onClose={() => {
+          setShowTimeTrackingModal(false)
+          setSelectedStaffForTimeTracking(null)
+        }}
+        staffMember={selectedStaffForTimeTracking}
       />
     </>
   )

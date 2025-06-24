@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MapPin, Building2, Phone, Mail, Clock, User, Wifi, Info, AlertTriangle, CheckCircle } from 'lucide-react'
+import { MapPin, Building2, Phone, Mail, Clock, User, Info, AlertTriangle, CheckCircle } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
@@ -33,16 +33,7 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
       sunday: { open: '09:00', close: '17:00', isClosed: true }
     },
     facilities: [],
-    notes: '',
-    wifiSettings: {
-      ssid: '',
-      isTrackingEnabled: false,
-      requireWifiForClockInOut: false,
-      autoClockInEnabled: true,
-      autoClockOutEnabled: true,
-      gracePeriodMinutes: 10,
-      connectionGracePeriodMinutes: 5
-    }
+    notes: ''
   })
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -246,15 +237,7 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
     }))
   }
 
-  const handleWiFiSettingsChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      wifiSettings: {
-        ...prev.wifiSettings,
-        [field]: value
-      }
-    }))
-  }
+
 
   const handleClose = () => {
     setFormData({
@@ -282,15 +265,7 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
       },
       facilities: [],
       notes: '',
-      wifiSettings: {
-        ssid: '',
-        isTrackingEnabled: false,
-        requireWifiForClockInOut: false,
-        autoClockInEnabled: true,
-        autoClockOutEnabled: true,
-        gracePeriodMinutes: 10,
-        connectionGracePeriodMinutes: 5
-      }
+
     })
     setErrors({})
     onClose()
@@ -540,183 +515,7 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
             </div>
           </div>
 
-          {/* WiFi Tracking Settings */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 border-b pb-2">
-              <Wifi className="h-4 w-4" />
-              WiFi Tracking Settings
-            </h3>
-            
-            <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-start gap-3">
-                <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="text-sm font-medium text-blue-900">About WiFi Tracking</h4>
-                  <p className="text-xs text-blue-700 mt-1">
-                    WiFi tracking allows you to automate clock in/out based on employee connection to your office WiFi network.
-                    You can also require employees to be connected to your WiFi to manually clock in or out.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={formData.wifiSettings.isTrackingEnabled}
-                  onChange={(e) => handleWiFiSettingsChange('isTrackingEnabled', e.target.checked)}
-                  className="rounded w-4 h-4"
-                />
-                <div>
-                  <label className="text-sm font-medium">Enable WiFi Tracking</label>
-                  <p className="text-xs text-gray-600">Enable WiFi-based features for this location</p>
-                </div>
-              </div>
 
-              {formData.wifiSettings.isTrackingEnabled && (
-                <div className="space-y-6 ml-7">
-                  {/* SSID Configuration with Better Explanation */}
-                  <div className="space-y-3 p-4 bg-white rounded-lg border">
-                    <div className="flex items-start gap-2">
-                      <Wifi className="h-4 w-4 text-gray-600 mt-0.5" />
-                      <div className="flex-1">
-                        <label className="text-sm font-medium text-gray-900">WiFi Network Name (SSID)</label>
-                        <p className="text-xs text-gray-600 mt-1">
-                          <strong>What is an SSID?</strong> It's the name of your WiFi network that appears when people search for WiFi on their devices.
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <Input
-                      value={formData.wifiSettings.ssid}
-                      onChange={(e) => handleWiFiSettingsChange('ssid', e.target.value)}
-                      placeholder="e.g., CompanyName-Office, MyBusiness-WiFi"
-                      className="text-base"
-                    />
-                    
-                    <div className="bg-amber-50 border border-amber-200 rounded p-3">
-                      <div className="flex gap-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                        <div className="text-xs text-amber-800">
-                          <p className="font-medium">How to find your WiFi network name:</p>
-                          <ul className="list-disc list-inside mt-1 space-y-1">
-                            <li>On your phone: Go to WiFi settings and look at connected network</li>
-                            <li>On Windows: Click WiFi icon in system tray</li>
-                            <li>On Mac: Click WiFi icon in menu bar</li>
-                            <li>Ask your IT department for the exact network name</li>
-                          </ul>
-                          <p className="mt-2 font-medium">⚠️ Enter the exact name - it's case-sensitive!</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* WiFi-Based Clock In/Out Requirements */}
-                  <div className="space-y-3 p-4 bg-white rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={formData.wifiSettings.requireWifiForClockInOut}
-                        onChange={(e) => handleWiFiSettingsChange('requireWifiForClockInOut', e.target.checked)}
-                        className="rounded w-4 h-4"
-                      />
-                      <div className="flex-1">
-                        <label className="text-sm font-medium text-gray-900">Require WiFi for Manual Clock In/Out</label>
-                        <p className="text-xs text-gray-600 mt-1">
-                          When enabled, employees must be connected to the office WiFi to manually clock in or clock out.
-                          This ensures they are physically present at the location.
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {formData.wifiSettings.requireWifiForClockInOut && (
-                      <div className="ml-7 p-3 bg-green-50 border border-green-200 rounded">
-                        <div className="flex gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <div className="text-xs text-green-800">
-                            <p className="font-medium">This feature will:</p>
-                            <ul className="list-disc list-inside mt-1 space-y-1">
-                              <li>Prevent clock in/out from outside the office</li>
-                              <li>Ensure employees are physically present</li>
-                              <li>Show clear error messages if WiFi is not connected</li>
-                              <li>Work alongside automatic WiFi tracking (if also enabled)</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Auto Clock In/Out Settings */}
-                  <div className="space-y-3 p-4 bg-white rounded-lg border">
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">Automatic Clock In/Out</h4>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={formData.wifiSettings.autoClockInEnabled}
-                          onChange={(e) => handleWiFiSettingsChange('autoClockInEnabled', e.target.checked)}
-                          className="rounded w-4 h-4"
-                        />
-                        <div>
-                          <label className="text-sm font-medium">Auto Clock In</label>
-                          <p className="text-xs text-gray-600">Clock in automatically when connecting to WiFi</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={formData.wifiSettings.autoClockOutEnabled}
-                          onChange={(e) => handleWiFiSettingsChange('autoClockOutEnabled', e.target.checked)}
-                          className="rounded w-4 h-4"
-                        />
-                        <div>
-                          <label className="text-sm font-medium">Auto Clock Out</label>
-                          <p className="text-xs text-gray-600">Clock out automatically when disconnecting from WiFi</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Timing Settings */}
-                  <div className="space-y-3 p-4 bg-white rounded-lg border">
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">Timing Settings</h4>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Grace Period (minutes)</label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="60"
-                          value={formData.wifiSettings.gracePeriodMinutes}
-                          onChange={(e) => handleWiFiSettingsChange('gracePeriodMinutes', parseInt(e.target.value) || 0)}
-                          className="text-base"
-                        />
-                        <p className="text-xs text-gray-500">Time before auto-unbooking missed shifts</p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Connection Grace Period (minutes)</label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="30"
-                          value={formData.wifiSettings.connectionGracePeriodMinutes}
-                          onChange={(e) => handleWiFiSettingsChange('connectionGracePeriodMinutes', parseInt(e.target.value) || 0)}
-                          className="text-base"
-                        />
-                        <p className="text-xs text-gray-500">Delay before auto clock out after WiFi disconnect</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Additional Settings */}
           <div className="space-y-4">

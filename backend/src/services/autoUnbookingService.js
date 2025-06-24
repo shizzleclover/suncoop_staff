@@ -8,7 +8,6 @@ const TimeEntry = require('../models/TimeEntry');
 const User = require('../models/User');
 const Location = require('../models/Location');
 const Notification = require('../models/Notification');
-const WiFiStatus = require('../models/WiFiStatus');
 const logger = require('../utils/logger');
 const { emitShiftUpdate, emitNotification } = require('../socket');
 
@@ -62,27 +61,6 @@ class AutoUnbookingService {
       if (timeEntry) {
         logger.info(`User ${userId} has clocked in for shift ${shift._id}, skipping auto-unbooking`);
         return { success: true, message: 'User has clocked in' };
-      }
-      
-      // Check WiFi connection status as additional verification
-      const wifiConnection = await WiFiStatus.findOne({
-        userId,
-        locationId,
-        isConnected: true,
-        isActive: true,
-        connectionTime: { 
-          $gte: new Date(shift.startTime.getTime() - (gracePeriodMinutes * 60 * 1000)),
-          $lte: new Date()
-        }
-      });
-      
-      if (wifiConnection) {
-        logger.info(`User ${userId} is connected to WiFi but hasn't clocked in, extending grace period`);
-        // Extend grace period by 5 minutes if user is connected to WiFi
-        const extendedGracePeriod = new Date(shift.startTime.getTime() + ((gracePeriodMinutes + 5) * 60 * 1000));
-        if (new Date() < extendedGracePeriod) {
-          return { success: true, message: 'Grace period extended due to WiFi connection' };
-        }
       }
       
       // Proceed with auto-unbooking

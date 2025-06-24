@@ -129,12 +129,22 @@ export default function StaffTimeTracking() {
                 <div>
                   <span className="text-gray-500">Clock In:</span>
                   <p className="font-medium">{formatTime(entry.clockInTime)}</p>
+                  {entry.clockInLocation?.address && (
+                    <p className="text-xs text-gray-500 mt-1 truncate">
+                      📍 {entry.clockInLocation.address}
+                    </p>
+                  )}
                 </div>
               )}
               {entry.clockOutTime && (
                 <div>
                   <span className="text-gray-500">Clock Out:</span>
                   <p className="font-medium">{formatTime(entry.clockOutTime)}</p>
+                  {entry.clockOutLocation?.address && (
+                    <p className="text-xs text-gray-500 mt-1 truncate">
+                      📍 {entry.clockOutLocation.address}
+                    </p>
+                  )}
                 </div>
               )}
               <div>

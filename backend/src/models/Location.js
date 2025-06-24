@@ -142,31 +142,7 @@ const locationSchema = new mongoose.Schema({
     type: String,
     trim: true
   }],
-  wifiSettings: {
-    ssid: {
-      type: String,
-      trim: true,
-      maxlength: [100, 'SSID cannot exceed 100 characters']
-    },
-    isWifiTrackingEnabled: {
-      type: Boolean,
-      default: false
-    },
-    requireWifiForClockInOut: {
-      type: Boolean,
-      default: false
-    },
-    wifiTrackingGracePeriod: {
-      type: Number,
-      default: 300, // 5 minutes in seconds
-      min: [30, 'Grace period must be at least 30 seconds']
-    },
-    autoClockOutDelay: {
-      type: Number,
-      default: 60, // 1 minute in seconds
-      min: [30, 'Auto clock out delay must be at least 30 seconds']
-    }
-  },
+
   notes: {
     type: String,
     trim: true,

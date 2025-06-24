@@ -23,7 +23,6 @@ import AdminLocations from './pages/admin/AdminLocations'
 import AdminReports from './pages/admin/AdminReports'
 import AdminSettings from './pages/admin/AdminSettings'
 import AdminProfile from './pages/admin/AdminProfile'
-import AdminWiFiTracking from './pages/admin/AdminWiFiTracking'
 import Layout from './components/Layout'
 
 // Protected route wrapper
@@ -209,14 +208,6 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[USER_ROLES.ADMIN]}>
                 <AdminProfile />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/admin/wifi-tracking" 
-            element={
-              <ProtectedRoute allowedRoles={[USER_ROLES.ADMIN]}>
-                <AdminWiFiTracking />
               </ProtectedRoute>
             } 
           />

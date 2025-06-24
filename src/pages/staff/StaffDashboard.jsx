@@ -6,6 +6,7 @@ import {
   MapPin, 
   CheckCircle, 
   AlertCircle, 
+  AlertTriangle,
   User,
   BarChart3,
   ClipboardList,
@@ -22,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import ClockInOutButton from '../../components/ClockInOutButton'
 import { useAuthStore } from '../../store/authStore'
 import { 
   shiftsApi, 
@@ -38,15 +40,8 @@ import {
   isTomorrow 
 } from '../../lib/utils'
 import toast from 'react-hot-toast'
-import WiFiTrackingComponent from '../../components/WiFiTrackingComponent'
-import WiFiStatusIndicator from '../../components/WiFiStatusIndicator'
 
-// Location data helper
-const locations = [
-  { _id: '1', name: 'Main Office', address: '123 Business St', city: 'Downtown' },
-  { _id: '2', name: 'Branch Office', address: '456 Commerce Ave', city: 'Uptown' },
-  { _id: '3', name: 'Warehouse', address: '789 Industrial Blvd', city: 'Industrial District' }
-]
+// Remove hardcoded locations - will load from API
 
 export default function StaffDashboard() {
   const { user, logout } = useAuthStore()
@@ -55,7 +50,6 @@ export default function StaffDashboard() {
   const [clockedIn, setClockedIn] = useState(false)
   const [currentTimeEntry, setCurrentTimeEntry] = useState(null)
   const [elapsedTime, setElapsedTime] = useState(0)
-  const [wifiStatus, setWifiStatus] = useState(null)
   
   const [dashboardData, setDashboardData] = useState({
     upcomingShifts: [],
@@ -69,6 +63,7 @@ export default function StaffDashboard() {
     todayShift: null,
     locations: []
   })
+  const [locations, setLocations] = useState([])
 
   useEffect(() => {
     if (user) {
@@ -93,8 +88,8 @@ export default function StaffDashboard() {
     try {
       setLoading(true)
       
-      // Load user's shifts and time entries
-      const [shiftsResponse, timeEntriesResponse] = await Promise.all([
+      // Load user's shifts, time entries, and locations
+      const [shiftsResponse, timeEntriesResponse, locationsResponse] = await Promise.all([
         shiftsApi.getUserShifts({ 
           limit: 10, 
           sortBy: 'startTime', 
@@ -104,11 +99,16 @@ export default function StaffDashboard() {
           limit: 5, 
           sortBy: 'date', 
           sortOrder: 'desc' 
-        })
+        }),
+        locationsApi.getLocations()
       ])
 
       const shifts = shiftsResponse.data.shifts || []
       const timeEntries = timeEntriesResponse.data.timeEntries || []
+      const locationsData = locationsResponse.data.locations || []
+      
+      // Set locations state
+      setLocations(locationsData)
       
       // Find if user is currently clocked in
       const currentEntry = timeEntries.find(entry => 
@@ -150,7 +150,7 @@ export default function StaffDashboard() {
         recentTimeEntries: timeEntries.slice(0, 5),
         weeklyStats,
         todayShift,
-        locations
+        locations: locationsData
       })
 
     } catch (error) {
@@ -165,17 +165,6 @@ export default function StaffDashboard() {
     try {
       const location = locations[0] // Default to first location
       
-      // Check WiFi requirements first
-      const wifiCheck = await timeTrackingApi.checkWiFiRequirements(location._id)
-      
-      if (wifiCheck.data.wifiRequired && !wifiCheck.data.wifiConnected) {
-        toast.error(
-          `WiFi Required: Please connect to "${wifiCheck.data.requiredSSID}" network to clock in.`,
-          { duration: 5000 }
-        )
-        return
-      }
-      
       const response = await timeTrackingApi.clockIn(location._id)
       
       setClockedIn(true)
@@ -187,31 +176,12 @@ export default function StaffDashboard() {
       
     } catch (error) {
       console.error('Clock in failed:', error)
-      
-      // Handle WiFi-specific errors
-      if (error.data?.error?.code === 'WIFI_REQUIRED') {
-        toast.error(error.data.error.message, { duration: 5000 })
-      } else {
-        toast.error('Failed to clock in. Please try again.')
-      }
+      toast.error('Failed to clock in. Please try again.')
     }
   }
 
   const handleClockOut = async () => {
     try {
-      // Check WiFi requirements for clock out if current time entry has a location
-      if (currentTimeEntry?.locationId?._id) {
-        const wifiCheck = await timeTrackingApi.checkWiFiRequirements(currentTimeEntry.locationId._id)
-        
-        if (wifiCheck.data.wifiRequired && !wifiCheck.data.wifiConnected) {
-          toast.error(
-            `WiFi Required: Please connect to "${wifiCheck.data.requiredSSID}" network to clock out.`,
-            { duration: 5000 }
-          )
-          return
-        }
-      }
-      
       await timeTrackingApi.clockOut(currentTimeEntry._id)
       
       setClockedIn(false)
@@ -224,13 +194,7 @@ export default function StaffDashboard() {
       
     } catch (error) {
       console.error('Clock out failed:', error)
-      
-      // Handle WiFi-specific errors
-      if (error.data?.error?.code === 'WIFI_REQUIRED') {
-        toast.error(error.data.error.message, { duration: 5000 })
-      } else {
-        toast.error('Failed to clock out. Please try again.')
-      }
+      toast.error('Failed to clock out. Please try again.')
     }
   }
 
@@ -329,44 +293,18 @@ export default function StaffDashboard() {
           </p>
         </div>
         
-        {/* Clock In/Out Button */}
+        {/* Clock In/Out Section */}
         <div className="w-full sm:w-auto">
-          {clockedIn ? (
-            <div className="space-y-2">
-              <div className="text-center">
-                <p className="text-xs text-gray-500 lg:text-sm">Working for</p>
-                <p className="text-lg font-mono font-bold text-green-600 lg:text-xl">
-                  {formatElapsedTime(elapsedTime)}
-                </p>
-              </div>
-              <Button 
-                onClick={handleClockOut}
-                className="w-full bg-red-600 hover:bg-red-700 text-white"
-                size="sm"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Clock Out
-              </Button>
+          {clockedIn && (
+            <div className="text-center mb-4">
+              <p className="text-xs text-gray-500 lg:text-sm">Working for</p>
+              <p className="text-lg font-mono font-bold text-green-600 lg:text-xl">
+                {formatElapsedTime(elapsedTime)}
+              </p>
             </div>
-          ) : (
-            <Button 
-              onClick={handleClockIn}
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-              size="sm"
-            >
-              <LogIn className="w-4 h-4 mr-2" />
-              Clock In
-            </Button>
           )}
         </div>
       </div>
-
-      {/* WiFi Status Indicator */}
-      <WiFiStatusIndicator 
-        locationId={locations[0]?._id} 
-        onStatusChange={setWifiStatus}
-        className="mb-4"
-      />
 
       {/* Today's Shift Alert */}
       {dashboardData.todayShift && (
@@ -417,11 +355,45 @@ export default function StaffDashboard() {
         />
       </div>
 
+      {/* Clock In/Out Component */}
+      {locations.length > 0 ? (
+        <ClockInOutButton
+          locationId={locations[0]?._id}
+          shiftId={dashboardData.todayShift?._id}
+          currentTimeEntry={currentTimeEntry}
+          onClockIn={(timeEntry) => {
+            setClockedIn(true);
+            setCurrentTimeEntry(timeEntry);
+            loadDashboardData();
+          }}
+          onClockOut={(timeEntry) => {
+            setClockedIn(false);
+            setCurrentTimeEntry(null);
+            setElapsedTime(0);
+            loadDashboardData();
+          }}
+          className="max-w-md mx-auto"
+        />
+      ) : (
+        <Card className="max-w-md mx-auto">
+          <CardContent className="p-6 text-center">
+            <div className="space-y-4">
+              <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto" />
+              <div>
+                <h3 className="font-semibold text-gray-900">No Locations Available</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Please contact your administrator to set up work locations.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Main Content Tabs */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="wifi">WiFi Tracking</TabsTrigger>
           <TabsTrigger value="actions">Quick Actions</TabsTrigger>
         </TabsList>
         
@@ -533,12 +505,7 @@ export default function StaffDashboard() {
           </Card>
         </TabsContent>
         
-        <TabsContent value="wifi" className="mt-6">
-          <WiFiTrackingComponent 
-            user={user} 
-            locations={dashboardData.locations} 
-          />
-        </TabsContent>
+
         
         <TabsContent value="actions" className="mt-6">
           <div>

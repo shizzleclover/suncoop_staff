@@ -10,6 +10,7 @@ const Shift = require('../models/Shift');
 const Notification = require('../models/Notification');
 const logger = require('../utils/logger');
 const { emitTimeTrackingUpdate, emitNotification } = require('../socket');
+const geocodingService = require('../services/geocodingService');
 
 /**
  * Get all time entries
@@ -306,37 +307,75 @@ const clockIn = async (req, res) => {
       });
     }
 
-    // Check WiFi requirements for manual clock in (if enabled for location)
-    if (workLocation.wifiSettings?.requireWifiForClockInOut && workLocation.wifiSettings?.ssid) {
-      const WiFiStatus = require('../models/WiFiStatus');
-      
-      // Check if user has active WiFi connection to this location
-      const activeWifiConnection = await WiFiStatus.findOne({
-        userId: req.user.id,
-        locationId: locationId,
-        isConnected: true,
-        isActive: true,
-        ssid: workLocation.wifiSettings.ssid,
-        // Connection must be recent (within last 5 minutes)
-        createdAt: { 
-          $gt: new Date(Date.now() - 5 * 60 * 1000) 
-        }
-      });
-
-      if (!activeWifiConnection) {
+    // Validate shift if provided and ensure user is assigned to it
+    let shift = null;
+    if (shiftId) {
+      shift = await Shift.findById(shiftId);
+      if (!shift) {
         return res.status(400).json({
           success: false,
           error: {
-            message: `You must be connected to the office WiFi network "${workLocation.wifiSettings.ssid}" to clock in at this location.`,
-            code: 'WIFI_REQUIRED',
-            details: {
-              locationName: workLocation.name,
-              requiredSSID: workLocation.wifiSettings.ssid,
-              wifiRequired: true
-            }
+            message: 'Shift not found'
           }
         });
       }
+
+      // Check if user is assigned to this shift
+      const isAssigned = shift.assignedStaff.some(staff => 
+        staff.userId.toString() === req.user.id
+      );
+
+      if (!isAssigned) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            message: 'You are not assigned to this shift'
+          }
+        });
+      }
+
+      // Allow clocking in to any assigned shift regardless of date
+    } else {
+      // Require shift ID for clock-in
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Shift selection is required for clock-in'
+        }
+      });
+    }
+
+
+
+    // Validate and process GPS location
+    let processedLocation = null;
+    if (location && location.latitude && location.longitude) {
+      if (!geocodingService.validateCoordinates(location.latitude, location.longitude)) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'Invalid GPS coordinates provided'
+          }
+        });
+      }
+
+      // Get address from coordinates
+      const geocodeResult = await geocodingService.reverseGeocode(
+        location.latitude, 
+        location.longitude
+      );
+
+      processedLocation = {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracy: location.accuracy || null,
+        address: geocodeResult.address,
+        formatted: geocodeResult.formatted,
+        geocoded: geocodeResult.success,
+        timestamp: new Date()
+      };
+
+      logger.info(`Clock-in location geocoded: ${geocodeResult.address} for user ${req.user.email}`);
     }
 
     // Create new time entry
@@ -348,8 +387,8 @@ const clockIn = async (req, res) => {
       status: 'clocked_in'
     });
 
-    // Clock in
-    await timeEntry.clockIn(location);
+    // Clock in with processed location
+    await timeEntry.clockIn(processedLocation);
 
     const populatedTimeEntry = await TimeEntry.findById(timeEntry._id).populate([
       { path: 'locationId', select: 'name address city type' },
@@ -425,42 +464,41 @@ const clockOut = async (req, res) => {
       });
     }
 
-    // Check WiFi requirements for manual clock out (if enabled for location)
-    const workLocation = await Location.findById(timeEntry.locationId);
-    if (workLocation?.wifiSettings?.requireWifiForClockInOut && workLocation.wifiSettings?.ssid) {
-      const WiFiStatus = require('../models/WiFiStatus');
-      
-      // Check if user has active WiFi connection to this location
-      const activeWifiConnection = await WiFiStatus.findOne({
-        userId: req.user.id,
-        locationId: timeEntry.locationId,
-        isConnected: true,
-        isActive: true,
-        ssid: workLocation.wifiSettings.ssid,
-        // Connection must be recent (within last 5 minutes)
-        createdAt: { 
-          $gt: new Date(Date.now() - 5 * 60 * 1000) 
-        }
-      });
 
-      if (!activeWifiConnection) {
+
+    // Validate and process GPS location for clock out
+    let processedLocation = null;
+    if (location && location.latitude && location.longitude) {
+      if (!geocodingService.validateCoordinates(location.latitude, location.longitude)) {
         return res.status(400).json({
           success: false,
           error: {
-            message: `You must be connected to the office WiFi network "${workLocation.wifiSettings.ssid}" to clock out at this location.`,
-            code: 'WIFI_REQUIRED',
-            details: {
-              locationName: workLocation.name,
-              requiredSSID: workLocation.wifiSettings.ssid,
-              wifiRequired: true
-            }
+            message: 'Invalid GPS coordinates provided'
           }
         });
       }
+
+      // Get address from coordinates
+      const geocodeResult = await geocodingService.reverseGeocode(
+        location.latitude, 
+        location.longitude
+      );
+
+      processedLocation = {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracy: location.accuracy || null,
+        address: geocodeResult.address,
+        formatted: geocodeResult.formatted,
+        geocoded: geocodeResult.success,
+        timestamp: new Date()
+      };
+
+      logger.info(`Clock-out location geocoded: ${geocodeResult.address} for user ${req.user.email}`);
     }
 
-    // Clock out
-    await timeEntry.clockOut(location);
+    // Clock out with processed location
+    await timeEntry.clockOut(processedLocation);
 
     if (notes) {
       timeEntry.notes = notes;
@@ -827,80 +865,7 @@ const getTimeSummary = async (req, res) => {
   }
 };
 
-/**
- * Check WiFi requirements for clock in/out
- * GET /api/time-entries/wifi-check/:locationId
- */
-const checkWiFiRequirements = async (req, res) => {
-  try {
-    const { locationId } = req.params;
 
-    // Validate location exists
-    const workLocation = await Location.findById(locationId);
-    if (!workLocation) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          message: 'Location not found'
-        }
-      });
-    }
-
-    const wifiRequired = workLocation.wifiSettings?.requireWifiForClockInOut && workLocation.wifiSettings?.ssid;
-    
-    let wifiConnected = false;
-    let connectionDetails = null;
-
-    if (wifiRequired) {
-      const WiFiStatus = require('../models/WiFiStatus');
-      
-      // Check if user has active WiFi connection to this location
-      const activeWifiConnection = await WiFiStatus.findOne({
-        userId: req.user.id,
-        locationId: locationId,
-        isConnected: true,
-        isActive: true,
-        ssid: workLocation.wifiSettings.ssid,
-        // Connection must be recent (within last 5 minutes)
-        createdAt: { 
-          $gt: new Date(Date.now() - 5 * 60 * 1000) 
-        }
-      });
-
-      if (activeWifiConnection) {
-        wifiConnected = true;
-        connectionDetails = {
-          ssid: activeWifiConnection.ssid,
-          connectedAt: activeWifiConnection.createdAt,
-          locationName: workLocation.name
-        };
-      }
-    }
-
-    res.status(200).json({
-      success: true,
-      data: {
-        locationId,
-        locationName: workLocation.name,
-        wifiRequired,
-        wifiConnected,
-        connectionDetails,
-        requiredSSID: workLocation.wifiSettings?.ssid || null,
-        canClockIn: !wifiRequired || wifiConnected,
-        canClockOut: !wifiRequired || wifiConnected
-      }
-    });
-
-  } catch (error) {
-    logger.error('WiFi check error:', error);
-    res.status(500).json({
-      success: false,
-      error: {
-        message: 'Failed to check WiFi requirements'
-      }
-    });
-  }
-};
 
 module.exports = {
   getTimeEntries,
@@ -913,6 +878,5 @@ module.exports = {
   rejectTimeEntry,
   getPendingApprovals,
   getCurrentlyWorking,
-  getTimeSummary,
-  checkWiFiRequirements
+  getTimeSummary
 }; 

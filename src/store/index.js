@@ -30,7 +30,6 @@ export const useStore = create(
 
       // Location state
       currentLocation: null,
-      wifiNetwork: null,
 
       // Notifications
       notifications: [],
@@ -94,7 +93,7 @@ export const useStore = create(
       setCurrentTimeEntry: (currentTimeEntry) => set({ currentTimeEntry }),
       setIsClocking: (isClocking) => set({ isClocking }),
 
-      clockIn: async (shiftId, location, wifiNetwork) => {
+      clockIn: async (shiftId, location) => {
         set({ isClocking: true })
         
         try {
@@ -104,7 +103,6 @@ export const useStore = create(
             userId: get().user.id,
             clockInTime: new Date().toISOString(),
             clockInLocation: location,
-            clockInWifi: wifiNetwork,
             status: TIME_ENTRY_STATUS.CLOCKED_IN
           }
           
@@ -124,7 +122,7 @@ export const useStore = create(
         }
       },
 
-      clockOut: async (location, wifiNetwork) => {
+      clockOut: async (location) => {
         set({ isClocking: true })
         
         try {
@@ -137,7 +135,6 @@ export const useStore = create(
             ...currentTimeEntry,
             clockOutTime: new Date().toISOString(),
             clockOutLocation: location,
-            clockOutWifi: wifiNetwork,
             status: TIME_ENTRY_STATUS.CLOCKED_OUT
           }
           
@@ -162,7 +159,6 @@ export const useStore = create(
 
       // Location actions
       setCurrentLocation: (location) => set({ currentLocation: location }),
-      setWifiNetwork: (network) => set({ wifiNetwork: network }),
 
       // Notification actions
       addNotification: (notification) => {
