@@ -1,11 +1,11 @@
-import { useState } from 'react'
-import { MapPin, Building2, Phone, Mail, Clock } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { MapPin, Building2, Phone, Mail, Clock, User } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog'
 import { useToast } from '../hooks/use-toast'
-import { locationsApi } from '../lib/api'
+import { locationsApi, usersApi } from '../lib/api'
 
 export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
   const { toast } = useToast()
@@ -16,15 +16,33 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
     state: '',
     zipCode: '',
     country: 'US',
-    type: '',
-    capacity: 1,
-    contactPhone: '',
+          type: '',
+      capacity: 1,
+      manager: 'none',
+      contactPhone: '',
     contactEmail: '',
     description: '',
-    timezone: 'UTC'
+    timezone: 'UTC',
+    operatingHours: {
+      monday: { open: '09:00', close: '17:00', isClosed: false },
+      tuesday: { open: '09:00', close: '17:00', isClosed: false },
+      wednesday: { open: '09:00', close: '17:00', isClosed: false },
+      thursday: { open: '09:00', close: '17:00', isClosed: false },
+      friday: { open: '09:00', close: '17:00', isClosed: false },
+      saturday: { open: '09:00', close: '17:00', isClosed: true },
+      sunday: { open: '09:00', close: '17:00', isClosed: true }
+    },
+    coordinates: {
+      latitude: '',
+      longitude: ''
+    },
+    facilities: [],
+    notes: ''
   })
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [users, setUsers] = useState([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
 
   const locationTypes = [
     { value: 'Office', label: 'Office' },
@@ -42,6 +60,41 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
     { value: 'America/Denver', label: 'Mountain Time' },
     { value: 'America/Los_Angeles', label: 'Pacific Time' }
   ]
+
+  const daysOfWeek = [
+    { key: 'monday', label: 'Monday' },
+    { key: 'tuesday', label: 'Tuesday' },
+    { key: 'wednesday', label: 'Wednesday' },
+    { key: 'thursday', label: 'Thursday' },
+    { key: 'friday', label: 'Friday' },
+    { key: 'saturday', label: 'Saturday' },
+    { key: 'sunday', label: 'Sunday' }
+  ]
+
+  // Load users when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      loadUsers()
+    }
+  }, [isOpen])
+
+  const loadUsers = async () => {
+    try {
+      setLoadingUsers(true)
+      const response = await usersApi.getUsers({ limit: 100, isActive: true })
+      
+      if (response.success && response.data.users) {
+        setUsers(response.data.users)
+      } else {
+        setUsers([])
+      }
+    } catch (error) {
+      console.error('Error loading users:', error)
+      setUsers([])
+    } finally {
+      setLoadingUsers(false)
+    }
+  }
 
   const validateForm = () => {
     const newErrors = {}
@@ -74,6 +127,15 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
       newErrors.contactPhone = 'Please enter a valid phone number'
     }
 
+    // Validate coordinates if provided
+    if (formData.coordinates.latitude && (isNaN(formData.coordinates.latitude) || formData.coordinates.latitude < -90 || formData.coordinates.latitude > 90)) {
+      newErrors.latitude = 'Latitude must be between -90 and 90'
+    }
+
+    if (formData.coordinates.longitude && (isNaN(formData.coordinates.longitude) || formData.coordinates.longitude < -180 || formData.coordinates.longitude > 180)) {
+      newErrors.longitude = 'Longitude must be between -180 and 180'
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -88,7 +150,18 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
     try {
       setIsSubmitting(true)
       
-      const response = await locationsApi.createLocation(formData)
+      // Prepare data for API
+      const locationData = {
+        ...formData,
+        coordinates: formData.coordinates.latitude && formData.coordinates.longitude ? {
+          latitude: parseFloat(formData.coordinates.latitude),
+          longitude: parseFloat(formData.coordinates.longitude)
+        } : undefined,
+        facilities: formData.facilities.filter(f => f.trim() !== ''),
+        manager: formData.manager && formData.manager !== 'none' ? formData.manager : undefined
+      }
+      
+      const response = await locationsApi.createLocation(locationData)
       
       if (response.success) {
         toast({
@@ -118,10 +191,22 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
   }
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
+    if (field.includes('.')) {
+      // Handle nested fields
+      const [parent, child] = field.split('.')
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value
+        }
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }))
+    }
     
     // Clear error when user starts typing
     if (errors[field]) {
@@ -130,6 +215,27 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
         [field]: ''
       }))
     }
+  }
+
+  const handleOperatingHoursChange = (day, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      operatingHours: {
+        ...prev.operatingHours,
+        [day]: {
+          ...prev.operatingHours[day],
+          [field]: value
+        }
+      }
+    }))
+  }
+
+  const handleFacilitiesChange = (value) => {
+    const facilities = value.split(',').map(f => f.trim()).filter(f => f !== '')
+    setFormData(prev => ({
+      ...prev,
+      facilities
+    }))
   }
 
   const handleClose = () => {
@@ -142,10 +248,26 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
       country: 'US',
       type: '',
       capacity: 1,
+      manager: 'none',
       contactPhone: '',
       contactEmail: '',
       description: '',
-      timezone: 'UTC'
+      timezone: 'UTC',
+      operatingHours: {
+        monday: { open: '09:00', close: '17:00', isClosed: false },
+        tuesday: { open: '09:00', close: '17:00', isClosed: false },
+        wednesday: { open: '09:00', close: '17:00', isClosed: false },
+        thursday: { open: '09:00', close: '17:00', isClosed: false },
+        friday: { open: '09:00', close: '17:00', isClosed: false },
+        saturday: { open: '09:00', close: '17:00', isClosed: true },
+        sunday: { open: '09:00', close: '17:00', isClosed: true }
+      },
+      coordinates: {
+        latitude: '',
+        longitude: ''
+      },
+      facilities: [],
+      notes: ''
     })
     setErrors({})
     onClose()
@@ -153,7 +275,7 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5" />
@@ -268,15 +390,79 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                 />
               </div>
             </div>
+
+            {/* Coordinates */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Latitude (Optional)</label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={formData.coordinates.latitude}
+                  onChange={(e) => handleInputChange('coordinates.latitude', e.target.value)}
+                  placeholder="40.7128"
+                  className={errors.latitude ? 'border-red-500' : ''}
+                />
+                {errors.latitude && <p className="text-xs text-red-500">{errors.latitude}</p>}
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Longitude (Optional)</label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={formData.coordinates.longitude}
+                  onChange={(e) => handleInputChange('coordinates.longitude', e.target.value)}
+                  placeholder="-74.0060"
+                  className={errors.longitude ? 'border-red-500' : ''}
+                />
+                {errors.longitude && <p className="text-xs text-red-500">{errors.longitude}</p>}
+              </div>
+            </div>
           </div>
 
-          {/* Contact & Settings */}
+          {/* Management & Contact */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <Phone className="h-4 w-4" />
-              Contact & Settings
+              <User className="h-4 w-4" />
+              Management & Contact
             </h3>
             
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Location Manager (Optional)</label>
+                <Select 
+                  value={formData.manager} 
+                  onValueChange={(value) => handleInputChange('manager', value)}
+                  disabled={loadingUsers}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={loadingUsers ? "Loading users..." : "Select a manager"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Manager</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user._id} value={user._id}>
+                        {user.firstName} {user.lastName} ({user.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Capacity</label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={formData.capacity}
+                  onChange={(e) => handleInputChange('capacity', parseInt(e.target.value) || 1)}
+                  className={errors.capacity ? 'border-red-500' : ''}
+                />
+                {errors.capacity && <p className="text-xs text-red-500">{errors.capacity}</p>}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Contact Phone</label>
@@ -302,20 +488,58 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                 {errors.contactEmail && <p className="text-xs text-red-500">{errors.contactEmail}</p>}
               </div>
             </div>
+          </div>
 
+          {/* Operating Hours */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Operating Hours
+            </h3>
+            
+            <div className="space-y-3">
+              {daysOfWeek.map((day) => (
+                <div key={day.key} className="flex items-center gap-4">
+                  <div className="w-20 text-sm font-medium">{day.label}</div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!formData.operatingHours[day.key].isClosed}
+                      onChange={(e) => handleOperatingHoursChange(day.key, 'isClosed', !e.target.checked)}
+                      className="rounded"
+                    />
+                    <span className="text-sm">Open</span>
+                  </div>
+                  {!formData.operatingHours[day.key].isClosed && (
+                    <>
+                      <Input
+                        type="time"
+                        value={formData.operatingHours[day.key].open}
+                        onChange={(e) => handleOperatingHoursChange(day.key, 'open', e.target.value)}
+                        className="w-32"
+                      />
+                      <span className="text-sm">to</span>
+                      <Input
+                        type="time"
+                        value={formData.operatingHours[day.key].close}
+                        onChange={(e) => handleOperatingHoursChange(day.key, 'close', e.target.value)}
+                        className="w-32"
+                      />
+                    </>
+                  )}
+                  {formData.operatingHours[day.key].isClosed && (
+                    <span className="text-sm text-gray-500">Closed</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Additional Settings */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900">Additional Settings</h3>
+            
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Capacity</label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={formData.capacity}
-                  onChange={(e) => handleInputChange('capacity', parseInt(e.target.value) || 1)}
-                  className={errors.capacity ? 'border-red-500' : ''}
-                />
-                {errors.capacity && <p className="text-xs text-red-500">{errors.capacity}</p>}
-              </div>
-              
               <div className="space-y-2">
                 <label className="text-sm font-medium">Timezone</label>
                 <Select value={formData.timezone} onValueChange={(value) => handleInputChange('timezone', value)}>
@@ -331,6 +555,24 @@ export default function AddLocationModal({ isOpen, onClose, onLocationAdded }) {
                   </SelectContent>
                 </Select>
               </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Facilities</label>
+                <Input
+                  value={formData.facilities.join(', ')}
+                  onChange={(e) => handleFacilitiesChange(e.target.value)}
+                  placeholder="WiFi, Parking, Cafeteria (comma separated)"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Notes</label>
+              <Input
+                value={formData.notes}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                placeholder="Additional notes about this location..."
+              />
             </div>
           </div>
         </form>
