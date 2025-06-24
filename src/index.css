@@ -199,7 +199,7 @@ body {
   input[type="time"],
   textarea,
   select {
-    @apply min-h-[48px] text-base px-4 py-3;
+    @apply min-h-[52px] text-base px-4 py-3;
     font-size: 16px !important; /* Prevents zoom on iOS */
   }
 
@@ -207,6 +207,72 @@ body {
   button {
     @apply min-h-[48px] px-6 py-3 text-base;
     touch-action: manipulation;
+  }
+
+  /* Bottom navigation specific improvements */
+  .bottom-nav-button {
+    @apply flex flex-col items-center justify-center py-3 px-2 min-h-[68px] transition-colors;
+  }
+
+  .bottom-nav-icon {
+    @apply w-5 h-5 mb-2 flex-shrink-0;
+  }
+
+  .bottom-nav-label {
+    @apply text-xs font-medium leading-tight text-center block;
+    line-height: 1.2;
+    min-height: 16px;
+  }
+
+  /* Card improvements for mobile */
+  .mobile-card {
+    @apply p-5 m-3 rounded-xl shadow-sm border;
+  }
+
+  .mobile-card-content {
+    @apply flex items-center gap-4;
+  }
+
+  .mobile-card-icon {
+    @apply p-3 rounded-lg bg-white/50 flex-shrink-0;
+  }
+
+  .mobile-card-text {
+    @apply flex-1 min-w-0;
+  }
+
+  .mobile-card-title {
+    @apply font-semibold text-gray-900 text-base truncate mb-1;
+  }
+
+  .mobile-card-description {
+    @apply text-sm text-gray-600 line-clamp-2;
+  }
+
+  /* Icon and text spacing utilities */
+  .icon-text-gap {
+    @apply gap-3;
+  }
+
+  .icon-text-gap-sm {
+    @apply gap-2;
+  }
+
+  .icon-text-gap-lg {
+    @apply gap-4;
+  }
+
+  /* Better icon sizing for mobile */
+  .mobile-icon-sm {
+    @apply w-4 h-4 flex-shrink-0;
+  }
+
+  .mobile-icon {
+    @apply w-5 h-5 flex-shrink-0;
+  }
+
+  .mobile-icon-lg {
+    @apply w-6 h-6 flex-shrink-0;
   }
 
   /* Checkbox and radio improvements */
@@ -241,11 +307,6 @@ body {
 
   .form-group {
     @apply space-y-3;
-  }
-
-  /* Card spacing for mobile */
-  .mobile-card {
-    @apply p-4 m-2 rounded-xl;
   }
 
   /* Better spacing for form labels */
@@ -299,12 +360,92 @@ body {
 
   /* Select trigger improvements */
   .select-trigger-mobile {
-    @apply min-h-[48px] text-base px-4;
+    @apply min-h-[52px] text-base px-4;
   }
 
   /* Section headers with better spacing */
   .section-header {
-    @apply text-sm font-semibold text-gray-900 flex items-center gap-2 border-b pb-2 mb-4;
+    @apply text-sm font-semibold text-gray-900 flex items-center gap-3 border-b pb-3 mb-4;
+  }
+
+  /* Sidebar menu improvements for mobile */
+  .sidebar-menu-item {
+    @apply flex items-center gap-3 p-3 rounded-lg transition-colors;
+  }
+
+  .sidebar-menu-icon {
+    @apply w-5 h-5 flex-shrink-0;
+  }
+
+  .sidebar-menu-text {
+    @apply font-medium;
+  }
+
+  /* Header improvements for mobile */
+  .mobile-header {
+    @apply flex items-center justify-between p-4 border-b bg-white;
+  }
+
+  .mobile-header-title {
+    @apply text-lg font-semibold text-gray-900;
+  }
+
+  /* Quick action cards specific mobile styling */
+  .quick-action-card {
+    @apply border-2 hover:shadow-md transition-all duration-200 cursor-pointer rounded-xl;
+  }
+
+  .quick-action-content {
+    @apply p-5 flex items-center gap-4;
+  }
+
+  .quick-action-icon-container {
+    @apply p-3 rounded-lg bg-white/50 flex-shrink-0;
+  }
+
+  .quick-action-icon {
+    @apply h-6 w-6;
+  }
+
+  .quick-action-text {
+    @apply flex-1 min-w-0;
+  }
+
+  .quick-action-title {
+    @apply font-semibold text-gray-900 text-base truncate mb-1;
+  }
+
+  .quick-action-description {
+    @apply text-sm text-gray-600 line-clamp-2;
+  }
+
+  /* Stat card mobile styling */
+  .stat-card-content {
+    @apply p-5 flex items-center justify-between;
+  }
+
+  .stat-card-text {
+    @apply flex-1;
+  }
+
+  .stat-card-title {
+    @apply text-sm font-medium text-gray-600 mb-1;
+  }
+
+  .stat-card-value {
+    @apply text-2xl font-bold text-gray-900;
+  }
+
+  .stat-card-subtitle {
+    @apply text-sm text-gray-500 mt-1;
+  }
+
+  .stat-card-icon-container {
+    @apply p-3 rounded-lg flex-shrink-0;
+  }
+
+  .stat-card-icon {
+    @apply h-6 w-6;
   }
 
   /* Improved focus states for accessibility */
@@ -332,4 +473,169 @@ body {
   .loading-spinner {
     @apply w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin;
   }
+
+  /* Alert improvements */
+  .mobile-alert {
+    @apply p-4 rounded-lg border-l-4;
+  }
+
+  .mobile-alert-content {
+    @apply flex items-start gap-3;
+  }
+
+  .mobile-alert-icon {
+    @apply h-5 w-5 mt-0.5 flex-shrink-0;
+  }
+
+  .mobile-alert-text {
+    @apply flex-1 min-w-0;
+  }
+
+  .mobile-alert-title {
+    @apply font-semibold text-base mb-1;
+  }
+
+  .mobile-alert-description {
+    @apply text-sm;
+  }
+
+  /* Tab improvements for mobile */
+  .mobile-tabs-list {
+    @apply grid w-full grid-cols-3 bg-gray-100 p-1 rounded-lg;
+  }
+
+  .mobile-tab-trigger {
+    @apply py-3 px-4 text-sm font-medium rounded-md transition-all;
+  }
+
+  .mobile-tab-content {
+    @apply mt-6 space-y-6;
+  }
+}
+
+/* Extra small screens (phones in portrait) */
+@media (max-width: 480px) {
+  .bottom-nav-button {
+    @apply py-2 px-1 min-h-[64px];
+  }
+
+  .bottom-nav-icon {
+    @apply w-4 h-4 mb-1;
+  }
+
+  .bottom-nav-label {
+    @apply text-xs leading-tight;
+  }
+
+  .mobile-card {
+    @apply p-4 m-2;
+  }
+
+  .mobile-card-content {
+    @apply gap-3;
+  }
+
+  .mobile-card-icon {
+    @apply p-2;
+  }
+
+  .quick-action-content {
+    @apply p-4 gap-3;
+  }
+
+  .quick-action-icon-container {
+    @apply p-2;
+  }
+
+  .quick-action-icon {
+    @apply h-5 w-5;
+  }
+
+  .stat-card-content {
+    @apply p-4;
+  }
+
+  .stat-card-icon-container {
+    @apply p-2;
+  }
+
+  .stat-card-icon {
+    @apply h-5 w-5;
+  }
+}
+
+/* Better input field styling and spacing */
+input[type="text"],
+input[type="email"], 
+input[type="password"],
+input[type="tel"],
+input[type="number"],
+input[type="url"],
+input[type="search"],
+textarea,
+select {
+  @apply text-base px-4 py-3 border border-gray-300 rounded-lg transition-all duration-200;
+  min-height: 52px;
+}
+
+/* Input icon spacing fixes */
+.input-with-icon {
+  @apply relative;
+}
+
+.input-icon-left {
+  @apply absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none z-10;
+  width: 20px;
+  height: 20px;
+}
+
+.input-icon-right {
+  @apply absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 z-10;
+  width: 20px;
+  height: 20px;
+}
+
+.input-field-with-left-icon {
+  @apply pl-14;
+}
+
+.input-field-with-right-icon {
+  @apply pr-14;
+}
+
+.input-field-with-both-icons {
+  @apply pl-14 pr-14;
+}
+
+/* Enhanced mobile input styling */
+@media (max-width: 768px) {
+  .input-icon-left {
+    left: 16px;
+    width: 18px;
+    height: 18px;
+  }
+  
+  .input-icon-right {
+    right: 16px;
+    width: 18px;
+    height: 18px;
+  }
+  
+  .input-field-with-left-icon {
+    padding-left: 48px;
+  }
+  
+  .input-field-with-right-icon {
+    padding-right: 48px;
+  }
+  
+  .input-field-with-both-icons {
+    padding-left: 48px;
+    padding-right: 48px;
+  }
+}
+
+button {
+  @apply text-base py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2;
+  min-height: 52px;
 }

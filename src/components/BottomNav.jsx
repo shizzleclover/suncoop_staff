@@ -17,8 +17,8 @@ export default function BottomNav() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
-  // Don't show bottom nav on login page
-  if (location.pathname === '/login') {
+  // Don't show bottom nav on login page or setup pages
+  if (location.pathname === '/login' || location.pathname === '/admin/setup' || location.pathname === '/staff-register') {
     return null
   }
 
@@ -85,26 +85,28 @@ export default function BottomNav() {
   const navItems = user?.role === USER_ROLES.STAFF ? staffNavItems : adminNavItems
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 md:hidden">
-      <div className={`grid ${navItems.length === 4 ? 'grid-cols-4' : 'grid-cols-5'} safe-area-padding-bottom`}>
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 md:hidden safe-area-padding-bottom">
+      <div className={`grid ${navItems.length === 4 ? 'grid-cols-4' : 'grid-cols-5'}`}>
         {navItems.map((item) => {
           const IconComponent = item.icon
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center justify-center py-2 px-1 min-h-[60px] transition-colors ${
+              className={`bottom-nav-button no-select ${
                 item.active
                   ? 'text-amber-600 bg-amber-50'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 active:bg-gray-100'
               }`}
+              type="button"
+              aria-label={item.label}
             >
-              <IconComponent className="w-4 h-4 mb-1 sm:w-5 sm:h-5" />
-              <span className="text-xs font-medium leading-tight">{item.label}</span>
+              <IconComponent className="bottom-nav-icon" />
+              <span className="bottom-nav-label">{item.label}</span>
             </button>
           )
         })}
       </div>
-    </div>
+    </nav>
   )
 } 

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Mail, Lock, BookOpen, User, AlertCircle, Info } from 'lucide-react'
+import { Eye, EyeOff, Mail, BookOpen, AlertCircle, Info, User } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function LoginPage() {
@@ -105,8 +105,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
-        <div className="flex flex-col items-center text-center space-y-2">
-          <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center">
+        <div className="flex flex-col items-center text-center space-y-3">
+          <div className="w-14 h-14 bg-amber-500 rounded-xl flex items-center justify-center shadow-lg">
             <span className="text-white font-bold text-xl">SC</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Sign in to SunCoop</h1>
@@ -114,89 +114,98 @@ export default function LoginPage() {
         </div>
 
         {/* Login Form */}
-        <Card>
-          <CardHeader className="space-y-1">
+        <Card className="shadow-lg">
+          <CardHeader className="space-y-2 pb-6">
             <CardTitle className="text-xl">Welcome back</CardTitle>
             <CardDescription>
               Enter your username or email and password to access your account
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             {/* Error Alerts */}
             {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+              <Alert variant="destructive" className="mobile-alert">
+                <div className="mobile-alert-content">
+                  <AlertCircle className="mobile-alert-icon" />
+                  <div className="mobile-alert-text">
+                    <AlertDescription>{error}</AlertDescription>
+                  </div>
+                </div>
               </Alert>
             )}
             
             {setupError && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{setupError}</AlertDescription>
+              <Alert variant="destructive" className="mobile-alert">
+                <div className="mobile-alert-content">
+                  <AlertCircle className="mobile-alert-icon" />
+                  <div className="mobile-alert-text">
+                    <AlertDescription>{setupError}</AlertDescription>
+                  </div>
+                </div>
               </Alert>
             )}
             
             {/* Setup Check Loading */}
             {isCheckingSetup && (
-              <Alert className="mb-4 border-blue-200 bg-blue-50">
-                <Info className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-700">
-                  Checking system status...
-                </AlertDescription>
+              <Alert className="mobile-alert border-blue-200 bg-blue-50">
+                <div className="mobile-alert-content">
+                  <Info className="mobile-alert-icon text-blue-600" />
+                  <div className="mobile-alert-text">
+                    <AlertDescription className="text-blue-700">
+                      Checking system status...
+                    </AlertDescription>
+                  </div>
+                </div>
               </Alert>
             )}
             
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="identifier">Username or Email</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  <Input
-                    id="identifier"
-                    type="text"
-                    placeholder="Enter username or email"
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    className="pl-10 h-11"
-                    required
-                  />
-                </div>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="input-group">
+                <Label htmlFor="identifier" className="form-label">Username or Email</Label>
+                <Input
+                  id="identifier"
+                  type="text"
+                  placeholder="Enter username or email"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  className="min-h-[52px] text-base"
+                  required
+                />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+              <div className="input-group">
+                <Label htmlFor="password" className="form-label">Password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-11 h-11"
+                    className="min-h-[52px] text-base pr-12"
                     required
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-9 w-9 p-0 hover:bg-transparent"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent tap-target"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      <EyeOff className="w-4 h-4 text-gray-400" />
                     ) : (
-                      <Eye className="h-4 w-4 text-muted-foreground" />
+                      <Eye className="w-4 h-4 text-gray-400" />
                     )}
                   </Button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pt-2">
                 <Link 
                   to="/password-reset" 
-                  className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                  className="text-sm text-blue-600 hover:text-blue-800 transition-colors tap-target"
                 >
                   Forgot password?
                 </Link>
@@ -204,7 +213,7 @@ export default function LoginPage() {
 
               <Button 
                 type="submit" 
-                className="w-full h-11" 
+                className="w-full min-h-[52px] text-base font-medium" 
                 disabled={isLoading}
               >
                 {isLoading ? "Signing in..." : "Sign in"}
@@ -214,38 +223,48 @@ export default function LoginPage() {
         </Card>
 
         {/* User Manual Link */}
-        <Card className="border-blue-200 bg-blue-50/50">
+        <Card className="border-blue-200 bg-blue-50/50 shadow-sm">
           <CardContent className="pt-6">
             <Link 
               to="/manual" 
-              className="flex items-center justify-center gap-3 w-full p-4 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              className="quick-action-card bg-blue-600 text-white hover:bg-blue-700 transition-colors block rounded-lg"
             >
-              <BookOpen className="h-5 w-5" />
-              <span className="font-medium">View Complete User Manual</span>
+              <div className="quick-action-content text-white">
+                <div className="quick-action-icon-container bg-white/20">
+                  <BookOpen className="quick-action-icon text-white" />
+                </div>
+                <div className="quick-action-text">
+                  <div className="quick-action-title text-white">View Complete User Manual</div>
+                </div>
+              </div>
             </Link>
-            <p className="text-center text-sm text-blue-700 mt-3">
+            <p className="text-center text-sm text-blue-700 mt-4">
               Learn about all features and capabilities before logging in
             </p>
           </CardContent>
         </Card>
 
         {/* Staff Registration Link */}
-        <Card className="border-green-200 bg-green-50/50">
+        <Card className="border-green-200 bg-green-50/50 shadow-sm">
           <CardContent className="pt-6">
             <Link 
               to="/staff-register" 
-              className="flex items-center justify-center gap-3 w-full p-4 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+              className="quick-action-card bg-green-600 text-white hover:bg-green-700 transition-colors block rounded-lg"
             >
-              <User className="h-5 w-5" />
-              <span className="font-medium">Join as Staff Member</span>
+              <div className="quick-action-content text-white">
+                <div className="quick-action-icon-container bg-white/20">
+                  <User className="quick-action-icon text-white" />
+                </div>
+                <div className="quick-action-text">
+                  <div className="quick-action-title text-white">Join as Staff Member</div>
+                </div>
+              </div>
             </Link>
-            <p className="text-center text-sm text-green-700 mt-3">
+            <p className="text-center text-sm text-green-700 mt-4">
               Request to join the team - admin approval required
             </p>
           </CardContent>
         </Card>
-
-        {/* Quick Links */}
       </div>
     </div>
   )
