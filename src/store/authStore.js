@@ -358,7 +358,7 @@ export const useAuthStore = create(
       isStaff: () => {
         const user = get().user;
         return user && user.role === USER_ROLES.STAFF;
-      }
+      },
     }),
     {
       name: 'suncoop-auth-storage',

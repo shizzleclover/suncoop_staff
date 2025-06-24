@@ -45,52 +45,76 @@ export default function ShiftGenerator({ isOpen, onClose, locations, onShiftsGen
     const start = new Date(startDate)
     const end = new Date(endDate)
     
+    console.log('Generating shifts:', { startDate, endDate, startTime, endTime, shiftDuration, breakBetweenShifts, daysOfWeek })
+    
     // Loop through each day in the date range
-    for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
-      const dayOfWeek = day.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+    const currentDay = new Date(start)
+    while (currentDay <= end) {
+      const dayOfWeek = currentDay.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+      
+      console.log('Processing day:', currentDay.toDateString(), 'dayOfWeek:', dayOfWeek, 'selected:', daysOfWeek[dayOfWeek])
       
       // Skip days that are not selected
-      if (!daysOfWeek[dayOfWeek]) continue
-      
-      // Parse start and end times
-      const [startHour, startMinute] = startTime.split(':').map(Number)
-      const [endHour, endMinute] = endTime.split(':').map(Number)
-      
-      // Calculate the total working period in hours
-      const totalWorkingHours = (endHour - startHour) + (endMinute - startMinute) / 60
-      
-      // Calculate how many shifts can fit in the working period
-      const shiftsPerDay = Math.floor(totalWorkingHours / (shiftDuration + breakBetweenShifts))
-      
-      // Generate shifts for this day
-      for (let i = 0; i < shiftsPerDay; i++) {
-        const shiftStart = new Date(day)
-        shiftStart.setHours(startHour)
-        shiftStart.setMinutes(startMinute)
-        shiftStart.setMinutes(shiftStart.getMinutes() + i * (shiftDuration + breakBetweenShifts) * 60)
+      if (daysOfWeek[dayOfWeek]) {
+        // Parse start and end times
+        const [startHour, startMinute] = startTime.split(':').map(Number)
+        const [endHour, endMinute] = endTime.split(':').map(Number)
         
-        const shiftEnd = new Date(shiftStart)
-        shiftEnd.setMinutes(shiftEnd.getMinutes() + shiftDuration * 60)
+        // Calculate the total working period in minutes
+        const workingStartMinutes = startHour * 60 + startMinute
+        const workingEndMinutes = endHour * 60 + endMinute
+        const totalWorkingMinutes = workingEndMinutes - workingStartMinutes
         
-        // Only add the shift if it ends before the end time
-        if (shiftEnd.getHours() <= endHour && 
-            (shiftEnd.getHours() < endHour || shiftEnd.getMinutes() <= endMinute)) {
+        // Calculate shift duration and break in minutes
+        const shiftDurationMinutes = shiftDuration * 60
+        const breakMinutes = breakBetweenShifts * 60
+        
+        console.log('Working period:', { totalWorkingMinutes, shiftDurationMinutes, breakMinutes })
+        
+        // Calculate how many shifts can fit in the working period
+        // We need at least one shift duration, and then additional shifts need duration + break
+        let currentMinute = 0
+        let shiftCount = 0
+        
+        while (currentMinute + shiftDurationMinutes <= totalWorkingMinutes) {
+          const shiftStart = new Date(currentDay)
+          shiftStart.setHours(0, 0, 0, 0) // Reset to start of day
+          shiftStart.setMinutes(workingStartMinutes + currentMinute)
+          
+          const shiftEnd = new Date(shiftStart)
+          shiftEnd.setMinutes(shiftEnd.getMinutes() + shiftDurationMinutes)
+          
           shifts.push({
             locationId,
             startTime: shiftStart,
             endTime: shiftEnd,
-            status: 'AVAILABLE'
+            status: 'AVAILABLE',
+            description: `Auto-generated shift`
           })
+          
+          shiftCount++
+          console.log(`Added shift ${shiftCount}:`, shiftStart.toLocaleString(), '-', shiftEnd.toLocaleString())
+          
+          // Move to next shift start time (current shift end + break)
+          currentMinute += shiftDurationMinutes + breakMinutes
         }
+        
+        console.log(`Generated ${shiftCount} shifts for ${currentDay.toDateString()}`)
       }
+      
+      // Move to next day
+      currentDay.setDate(currentDay.getDate() + 1)
     }
     
+    console.log('Total shifts generated:', shifts.length)
     setPreviewShifts(shifts)
     setIsPreviewMode(true)
   }
 
   // Validate the form
   const validateForm = () => {
+    console.log('Validating form:', { locationId, startDate, endDate, startTime, endTime, daysOfWeek })
+    
     if (!locationId) {
       toast({
         title: "Error",
@@ -127,6 +151,20 @@ export default function ShiftGenerator({ isOpen, onClose, locations, onShiftsGen
       return false
     }
     
+    const [startHour, startMinute] = startTime.split(':').map(Number)
+    const [endHour, endMinute] = endTime.split(':').map(Number)
+    const startMinutes = startHour * 60 + startMinute
+    const endMinutes = endHour * 60 + endMinute
+    
+    if (startMinutes >= endMinutes) {
+      toast({
+        title: "Error",
+        description: "End time must be after start time",
+        variant: "destructive"
+      })
+      return false
+    }
+    
     // Check if any day is selected
     if (!Object.values(daysOfWeek).some(day => day)) {
       toast({
@@ -137,6 +175,20 @@ export default function ShiftGenerator({ isOpen, onClose, locations, onShiftsGen
       return false
     }
     
+    // Check if shift duration is reasonable
+    const totalWorkingMinutes = endMinutes - startMinutes
+    const shiftDurationMinutes = shiftDuration * 60
+    
+    if (shiftDurationMinutes > totalWorkingMinutes) {
+      toast({
+        title: "Error",
+        description: "Shift duration cannot be longer than the working period",
+        variant: "destructive"
+      })
+      return false
+    }
+    
+    console.log('Form validation passed')
     return true
   }
 

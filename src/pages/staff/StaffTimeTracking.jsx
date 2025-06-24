@@ -33,8 +33,7 @@ export default function StaffTimeTracking() {
     
     setIsLoading(true)
     try {
-      const response = await timeTrackingApi.getTimeEntries({
-        userId: user.id,
+      const response = await timeTrackingApi.getMyTimeEntries({
         limit: 50,
         sortBy: 'date',
         sortOrder: 'desc'
@@ -57,7 +56,6 @@ export default function StaffTimeTracking() {
     
     try {
       const response = await timeTrackingApi.getTimeSummary({
-        userId: user.id,
         startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
         endDate: new Date().toISOString()
       })
@@ -194,7 +192,7 @@ export default function StaffTimeTracking() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Hours (This Month)</CardDescription>
@@ -211,12 +209,6 @@ export default function StaffTimeTracking() {
           <CardHeader className="pb-2">
             <CardDescription>Overtime Hours</CardDescription>
             <CardTitle className="text-2xl">{timeSummary.totalOvertimeHours || 0}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Pay</CardDescription>
-            <CardTitle className="text-2xl">${timeSummary.totalPay || 0}</CardTitle>
           </CardHeader>
         </Card>
       </div>

@@ -50,6 +50,7 @@ const getUsers = async (req, res) => {
         .sort(sortObj)
         .skip(skip)
         .limit(parseInt(limit))
+        .select('+isActive')
         .populate('createdBy', 'firstName lastName email'),
       User.countDocuments(filter)
     ]);
@@ -87,7 +88,7 @@ const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const user = await User.findById(id).populate('createdBy', 'firstName lastName email');
+    const user = await User.findById(id).select('+isActive').populate('createdBy', 'firstName lastName email');
     
     if (!user) {
       return res.status(404).json({
@@ -122,7 +123,7 @@ const getUserById = async (req, res) => {
  */
 const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('+isActive');
 
     res.status(200).json({
       success: true,

@@ -14,6 +14,7 @@ import StaffDashboard from './pages/staff/StaffDashboard'
 import StaffShifts from './pages/staff/StaffShifts'
 import StaffTimeTracking from './pages/staff/StaffTimeTracking'
 import StaffProfile from './pages/staff/StaffProfile'
+import StaffUserManual from './pages/staff/StaffUserManual'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminStaff from './pages/admin/AdminStaff'
 import AdminShifts from './pages/admin/AdminShifts'
@@ -132,6 +133,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={[USER_ROLES.STAFF]}>
                 <StaffProfile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/staff/user-manual" 
+            element={
+              <ProtectedRoute allowedRoles={[USER_ROLES.STAFF]}>
+                <StaffUserManual />
               </ProtectedRoute>
             } 
           />

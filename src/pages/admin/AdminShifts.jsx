@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Calendar, Clock, MapPin, Users, Filter, Search, MoreHorizontal, Edit, Trash2 } from 'lucide-react'
+import { Plus, Calendar, Clock, MapPin, Users, Filter, Search, MoreHorizontal, Edit, Trash2, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu'
 import { Input } from '../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
 import { useToast } from '../../hooks/use-toast'
 import { formatTime, formatDate, formatDateShort } from '../../lib/utils'
 import { shiftsApi, locationsApi } from '../../lib/api'
@@ -22,6 +23,9 @@ export default function AdminShifts() {
   const [filterLocation, setFilterLocation] = useState('all')
   const [filterDate, setFilterDate] = useState('')
   const [showGeneratorModal, setShowGeneratorModal] = useState(false)
+  const [showClearAllDialog, setShowClearAllDialog] = useState(false)
+  const [confirmText, setConfirmText] = useState('')
+  const [isClearing, setIsClearing] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -138,6 +142,38 @@ export default function AdminShifts() {
     loadData() // Refresh the shifts list
   }
 
+  // Handle clearing all shifts
+  const handleClearAllShifts = async () => {
+    if (confirmText !== 'DELETE ALL SHIFTS') {
+      toast({
+        title: "Error",
+        description: "Please type 'DELETE ALL SHIFTS' to confirm",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsClearing(true)
+    try {
+      await shiftsApi.clearAllShifts(confirmText)
+      toast({
+        title: "Success",
+        description: "All shifts have been cleared successfully",
+      })
+      setShowClearAllDialog(false)
+      setConfirmText('')
+      loadData() // Refresh the shifts list
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to clear shifts",
+        variant: "destructive",
+      })
+    } finally {
+      setIsClearing(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-4">
@@ -162,16 +198,27 @@ export default function AdminShifts() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-                      <h1 className="text-2xl font-bold text-gray-900">Shift Management</h1>
-          <p className="text-gray-600">Create, assign, and manage work shifts</p>
-        </div>
-        <Button 
-          className="bg-amber-600 hover:bg-amber-700"
-          onClick={() => setShowGeneratorModal(true)}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Generate Shifts
-        </Button>
+            <h1 className="text-2xl font-bold text-gray-900">Shift Management</h1>
+            <p className="text-gray-600">Create, assign, and manage work shifts</p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <Button 
+              variant="outline"
+              className="text-red-600 border-red-300 hover:bg-red-50"
+              onClick={() => setShowClearAllDialog(true)}
+              disabled={shifts.length === 0}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Clear All Shifts
+            </Button>
+            <Button 
+              className="bg-amber-600 hover:bg-amber-700"
+              onClick={() => setShowGeneratorModal(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Generate Shifts
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -354,6 +401,65 @@ export default function AdminShifts() {
             onShiftsGenerated={handleShiftsGenerated}
           />
         )}
+
+        {/* Clear All Shifts Confirmation Dialog */}
+        <Dialog open={showClearAllDialog} onOpenChange={setShowClearAllDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center space-x-2 text-red-600">
+                <AlertTriangle className="w-5 h-5" />
+                <span>Clear All Shifts</span>
+              </DialogTitle>
+              <DialogDescription className="space-y-3 pt-2">
+                <p>
+                  <strong>This action will permanently delete ALL shifts:</strong>
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>All available shifts will be removed</li>
+                  <li>All booked shifts will be cancelled and removed</li>
+                  <li>All completed shifts will be deleted from history</li>
+                  <li>Staff assignments will be lost</li>
+                </ul>
+                <p className="text-red-600 font-medium">
+                  This action cannot be undone!
+                </p>
+                <p>
+                  To confirm, type <strong>"DELETE ALL SHIFTS"</strong> below:
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Input
+                placeholder="Type: DELETE ALL SHIFTS"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                className="font-mono"
+              />
+              <p className="text-sm text-gray-500">
+                Found {shifts.length} shift{shifts.length !== 1 ? 's' : ''} to delete
+              </p>
+            </div>
+            <DialogFooter className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowClearAllDialog(false)
+                  setConfirmText('')
+                }}
+                disabled={isClearing}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleClearAllShifts}
+                disabled={isClearing || confirmText !== 'DELETE ALL SHIFTS'}
+              >
+                {isClearing ? 'Clearing...' : 'Clear All Shifts'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

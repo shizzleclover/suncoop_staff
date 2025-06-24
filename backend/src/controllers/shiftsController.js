@@ -406,7 +406,7 @@ const assignShift = async (req, res) => {
     const targetUserId = userId || req.user.id;
 
     // Validate user exists and is staff
-    const user = await User.findById(targetUserId);
+    const user = await User.findById(targetUserId).select('+isActive');
     if (!user || !user.isActive) {
       return res.status(400).json({
         success: false,
@@ -583,6 +583,76 @@ const deleteShift = async (req, res) => {
   }
 };
 
+/**
+ * Clear all shifts (admin only)
+ * DELETE /api/shifts/clear-all
+ */
+const clearAllShifts = async (req, res) => {
+  try {
+    const { confirmText } = req.body;
+
+    // Require confirmation text for safety
+    if (confirmText !== 'DELETE ALL SHIFTS') {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Please confirm by typing "DELETE ALL SHIFTS" exactly'
+        }
+      });
+    }
+
+    // Get total count before deletion
+    const totalShifts = await Shift.countDocuments();
+    
+    // Get count of shifts with assignments for notification purposes
+    const bookedShifts = await Shift.countDocuments({ assignedTo: { $ne: null } });
+
+    // Delete all shifts regardless of status
+    const result = await Shift.deleteMany({});
+
+    logger.warn(`All shifts cleared: ${result.deletedCount} shifts deleted by admin ${req.user.email}`);
+
+    // Create notifications for users who had booked shifts
+    if (bookedShifts > 0) {
+      const User = require('../models/User');
+      const staffUsers = await User.find({ role: 'staff', isActive: true }).select('_id');
+      
+      const notifications = staffUsers.map(user => ({
+        userId: user._id,
+        type: 'shift_cancelled',
+        title: 'All Shifts Cleared',
+        message: 'All shifts have been cleared by an administrator. Please check for new shifts.',
+        priority: 'high',
+        category: 'warning'
+      }));
+
+      if (notifications.length > 0) {
+        const Notification = require('../models/Notification');
+        await Notification.insertMany(notifications);
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `All shifts cleared successfully. ${result.deletedCount} shifts deleted.`,
+      data: {
+        deletedCount: result.deletedCount,
+        totalShifts,
+        bookedShifts
+      }
+    });
+
+  } catch (error) {
+    logger.error('Clear all shifts error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Failed to clear all shifts'
+      }
+    });
+  }
+};
+
 module.exports = {
   getShifts,
   getAvailableShifts,
@@ -592,5 +662,6 @@ module.exports = {
   updateShift,
   assignShift,
   unassignShift,
-  deleteShift
+  deleteShift,
+  clearAllShifts
 }; 

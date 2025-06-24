@@ -261,6 +261,13 @@ export const shiftsApi = {
       method: 'DELETE',
     });
   },
+  
+  clearAllShifts: async (confirmText) => {
+    return await apiRequest('/shifts/clear-all', {
+      method: 'DELETE',
+      body: { confirmText },
+    });
+  },
 };
 
 // Locations API

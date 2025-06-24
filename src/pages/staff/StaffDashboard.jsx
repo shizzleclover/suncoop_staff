@@ -332,7 +332,7 @@ export default function StaffDashboard() {
                 <p className="text-xs text-blue-700 mt-1 lg:text-sm">
                   {formatTime(dashboardData.todayShift.startTime)} - {formatTime(dashboardData.todayShift.endTime)}
                   {' at '} 
-                  {locations.find(loc => loc._id === dashboardData.todayShift.locationId)?.name}
+                  {locations.find(loc => loc._id === (dashboardData.todayShift.locationId?._id || dashboardData.todayShift.locationId))?.name || dashboardData.todayShift.locationId?.name}
                 </p>
               </div>
             </div>
@@ -408,7 +408,7 @@ export default function StaffDashboard() {
           {dashboardData.upcomingShifts.length > 0 ? (
             <div className="space-y-3">
               {dashboardData.upcomingShifts.map((shift) => {
-                const location = locations.find(loc => loc._id === shift.locationId)
+                const location = locations.find(loc => loc._id === (shift.locationId?._id || shift.locationId)) || shift.locationId
                 const duration = calculateHours(shift.startTime, shift.endTime)
                 
                 return (
@@ -459,7 +459,7 @@ export default function StaffDashboard() {
           {dashboardData.recentTimeEntries.length > 0 ? (
             <div className="space-y-3">
               {dashboardData.recentTimeEntries.map((entry) => {
-                const location = locations.find(loc => loc._id === entry.locationId)
+                const location = locations.find(loc => loc._id === (entry.locationId?._id || entry.locationId)) || entry.locationId
                 
                 return (
                   <div key={entry._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg lg:p-4">

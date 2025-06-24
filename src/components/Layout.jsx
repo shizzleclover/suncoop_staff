@@ -33,7 +33,7 @@ const staffMenuItems = [
   { icon: Calendar, label: 'Shifts', href: '/staff/shifts' },
   { icon: Clock, label: 'Time Tracking', href: '/staff/time-tracking' },
   { icon: User, label: 'Profile', href: '/staff/profile' },
-  { icon: BookOpen, label: 'User Manual', href: '/manual' },
+  { icon: BookOpen, label: 'User Manual', href: '/staff/user-manual' },
 ]
 
 const adminMenuItems = [
@@ -168,7 +168,7 @@ export default function Layout({ children }) {
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link to="/manual">
+                      <Link to={user?.role === USER_ROLES.ADMIN ? '/manual' : '/staff/user-manual'}>
                         <BookOpen className="mr-2 h-4 w-4" />
                         User Manual
                       </Link>

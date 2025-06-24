@@ -125,7 +125,10 @@ export default function StaffShifts() {
         shift.description?.toLowerCase().includes(searchTerm.toLowerCase())
       
       const matchesStatus = statusFilter === 'all' || shift.status.toLowerCase() === statusFilter
-      const matchesLocation = locationFilter === 'all' || shift.locationId === locationFilter
+      
+      // Handle both populated location objects and location IDs
+      const locationId = typeof shift.locationId === 'object' ? shift.locationId._id : shift.locationId
+      const matchesLocation = locationFilter === 'all' || locationId === locationFilter
       
       return matchesSearch && matchesStatus && matchesLocation
     })
@@ -190,12 +193,22 @@ export default function StaffShifts() {
   }
 
   const getUniqueLocations = () => {
-    const allShifts = activeTab === 'available' ? availableShifts : userShifts
-    const locations = allShifts.map(shift => shift.locationId).filter(Boolean)
+    const allShifts = [...availableShifts, ...userShifts]
+    const locations = allShifts.map(shift => {
+      // Handle both populated location objects and location IDs
+      if (typeof shift.locationId === 'object' && shift.locationId._id) {
+        return shift.locationId
+      }
+      return null
+    }).filter(Boolean)
     return [...new Map(locations.map(loc => [loc._id, loc])).values()]
   }
 
   const getLocationById = (locationId) => {
+    // Handle both populated location objects and location IDs
+    if (typeof locationId === 'object' && locationId._id) {
+      return locationId; // Already populated
+    }
     return getUniqueLocations().find(loc => loc._id === locationId)
   }
 

@@ -69,6 +69,13 @@ router.post('/:id/assign', shiftsController.assignShift);
 router.post('/:id/unassign', shiftsController.unassignShift);
 
 /**
+ * @route   DELETE /api/shifts/clear-all
+ * @desc    Clear all shifts (admin only)
+ * @access  Private/Admin
+ */
+router.delete('/clear-all', requireAdmin, shiftsController.clearAllShifts);
+
+/**
  * @route   DELETE /api/shifts/:id
  * @desc    Delete shift
  * @access  Private/Admin
