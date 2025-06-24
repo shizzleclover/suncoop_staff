@@ -10,6 +10,7 @@ const Shift = require('../models/Shift');
 const Notification = require('../models/Notification');
 const logger = require('../utils/logger');
 const { emitTimeTrackingUpdate, emitNotification } = require('../socket');
+const geocodingService = require('../services/geocodingService');
 
 /**
  * Get all time entries
@@ -306,7 +307,76 @@ const clockIn = async (req, res) => {
       });
     }
 
+    // Validate shift if provided and ensure user is assigned to it
+    let shift = null;
+    if (shiftId) {
+      shift = await Shift.findById(shiftId);
+      if (!shift) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'Shift not found'
+          }
+        });
+      }
 
+      // Check if user is assigned to this shift
+      const isAssigned = shift.assignedStaff.some(staff => 
+        staff.userId.toString() === req.user.id
+      );
+
+      if (!isAssigned) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            message: 'You are not assigned to this shift'
+          }
+        });
+      }
+
+      // Allow clocking in to any assigned shift regardless of date
+    } else {
+      // Require shift ID for clock-in
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Shift selection is required for clock-in'
+        }
+      });
+    }
+
+
+
+    // Validate and process GPS location
+    let processedLocation = null;
+    if (location && location.latitude && location.longitude) {
+      if (!geocodingService.validateCoordinates(location.latitude, location.longitude)) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'Invalid GPS coordinates provided'
+          }
+        });
+      }
+
+      // Get address from coordinates
+      const geocodeResult = await geocodingService.reverseGeocode(
+        location.latitude, 
+        location.longitude
+      );
+
+      processedLocation = {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracy: location.accuracy || null,
+        address: geocodeResult.address,
+        formatted: geocodeResult.formatted,
+        geocoded: geocodeResult.success,
+        timestamp: new Date()
+      };
+
+      logger.info(`Clock-in location geocoded: ${geocodeResult.address} for user ${req.user.email}`);
+    }
 
     // Create new time entry
     const timeEntry = await TimeEntry.create({
@@ -317,8 +387,8 @@ const clockIn = async (req, res) => {
       status: 'clocked_in'
     });
 
-    // Clock in
-    await timeEntry.clockIn(location);
+    // Clock in with processed location
+    await timeEntry.clockIn(processedLocation);
 
     const populatedTimeEntry = await TimeEntry.findById(timeEntry._id).populate([
       { path: 'locationId', select: 'name address city type' },
@@ -396,8 +466,39 @@ const clockOut = async (req, res) => {
 
 
 
-    // Clock out
-    await timeEntry.clockOut(location);
+    // Validate and process GPS location for clock out
+    let processedLocation = null;
+    if (location && location.latitude && location.longitude) {
+      if (!geocodingService.validateCoordinates(location.latitude, location.longitude)) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: 'Invalid GPS coordinates provided'
+          }
+        });
+      }
+
+      // Get address from coordinates
+      const geocodeResult = await geocodingService.reverseGeocode(
+        location.latitude, 
+        location.longitude
+      );
+
+      processedLocation = {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracy: location.accuracy || null,
+        address: geocodeResult.address,
+        formatted: geocodeResult.formatted,
+        geocoded: geocodeResult.success,
+        timestamp: new Date()
+      };
+
+      logger.info(`Clock-out location geocoded: ${geocodeResult.address} for user ${req.user.email}`);
+    }
+
+    // Clock out with processed location
+    await timeEntry.clockOut(processedLocation);
 
     if (notes) {
       timeEntry.notes = notes;

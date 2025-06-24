@@ -72,13 +72,19 @@ const timeEntrySchema = new mongoose.Schema({
     latitude: Number,
     longitude: Number,
     accuracy: Number,
-    timestamp: Date
+    timestamp: Date,
+    address: String,
+    formatted: String,
+    geocoded: { type: Boolean, default: false }
   },
   clockOutLocation: {
     latitude: Number,
     longitude: Number,
     accuracy: Number,
-    timestamp: Date
+    timestamp: Date,
+    address: String,
+    formatted: String,
+    geocoded: { type: Boolean, default: false }
   },
 
   isLate: {
@@ -203,7 +209,10 @@ timeEntrySchema.methods.clockIn = function(location = null) {
       latitude: location.latitude,
       longitude: location.longitude,
       accuracy: location.accuracy,
-      timestamp: new Date()
+      timestamp: location.timestamp || new Date(),
+      address: location.address || null,
+      formatted: location.formatted || null,
+      geocoded: location.geocoded || false
     };
   }
   
@@ -226,7 +235,10 @@ timeEntrySchema.methods.clockOut = function(location = null) {
       latitude: location.latitude,
       longitude: location.longitude,
       accuracy: location.accuracy,
-      timestamp: new Date()
+      timestamp: location.timestamp || new Date(),
+      address: location.address || null,
+      formatted: location.formatted || null,
+      geocoded: location.geocoded || false
     };
   }
   

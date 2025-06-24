@@ -176,6 +176,11 @@ export const usersApi = {
     return await apiRequest(`/users?${queryString}`);
   },
   
+  getAllUsers: async (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return await apiRequest(`/users?${queryString}`);
+  },
+  
   getUserById: async (id) => {
     return await apiRequest(`/users/${id}`);
   },
@@ -210,6 +215,13 @@ export const usersApi = {
     });
   },
   
+  updateUserStatus: async (id, isActive) => {
+    return await apiRequest(`/users/${id}/status`, {
+      method: 'PUT',
+      body: { isActive },
+    });
+  },
+  
   getUserStats: async () => {
     return await apiRequest('/users/stats');
   },
@@ -238,10 +250,9 @@ export const usersApi = {
     });
   },
 
-  deleteUser: async (userId, confirmText) => {
+  deleteUser: async (userId) => {
     return await apiRequest(`/users/${userId}`, {
       method: 'DELETE',
-      body: { confirmText },
     });
   },
 };
@@ -394,8 +405,6 @@ export const timeTrackingApi = {
     });
   },
   
-
-
   clockOut: async (timeEntryId = null, location = null, notes = null) => {
     return await apiRequest('/time-entries/clock-out', {
       method: 'POST',
